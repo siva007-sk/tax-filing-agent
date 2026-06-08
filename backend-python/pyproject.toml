@@ -1,0 +1,45 @@
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (undefined names, unused imports)
+    "I",    # isort (import ordering)
+    "UP",   # pyupgrade (modernise syntax for target Python version)
+    "B",    # flake8-bugbear (common bugs and design issues)
+    "N",    # pep8-naming
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    # FastAPI uses function calls (e.g. Depends(), Body()) as default arguments
+    "B008",
+    # Allow if/else instead of ternary — more readable in async handlers
+    "SIM108",
+    # Allow nested if statements
+    "SIM102",
+    # Allow explicit string concatenation
+    "RUF010",
+    # Line too long — string literals (LLM prompts, legal text, URLs) cannot be
+    # broken without changing content. Line length is enforced by the formatter
+    # for code; string data is exempt.
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Route handlers use verb-style lowercase names (get_profile, etc.) — fine
+"routes/api.py" = ["N802", "N803"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["services", "routes", "config"]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true

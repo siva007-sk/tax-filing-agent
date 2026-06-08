@@ -1,0 +1,14 @@
+{
+  "name": "tax-filing-agent-monorepo",
+  "version": "1.0.0",
+  "description": "Indian Tax Filing Agent with RAG Capabilities",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix frontend && pip install -r backend-python/requirements.txt",
+    "dev": "concurrently \"cd backend-python && python -m uvicorn main:app --port 5000 --reload\" \"npm run dev --prefix frontend\"",
+    "build": "npm run build --prefix frontend",
+    "start": "cd backend-python && python -m uvicorn main:app --port 5000"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

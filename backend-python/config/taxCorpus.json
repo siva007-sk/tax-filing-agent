@@ -1,0 +1,158 @@
+{
+  "assessment_year": "2026-27",
+  "financial_year": "2025-26",
+  "slabs": {
+    "new_regime": [
+      { "min": 0, "max": 400000, "rate": 0, "fixed": 0 },
+      { "min": 400000, "max": 800000, "rate": 5, "fixed": 0 },
+      { "min": 800000, "max": 1200000, "rate": 10, "fixed": 20000 },
+      { "min": 1200000, "max": 1600000, "rate": 15, "fixed": 60000 },
+      { "min": 1600000, "max": 2000000, "rate": 20, "fixed": 120000 },
+      { "min": 2000000, "max": 2400000, "rate": 25, "fixed": 200000 },
+      { "min": 2400000, "max": null, "rate": 30, "fixed": 300000 }
+    ],
+    "old_regime": {
+      "general": [
+        { "min": 0, "max": 250000, "rate": 0, "fixed": 0 },
+        { "min": 250000, "max": 500000, "rate": 5, "fixed": 0 },
+        { "min": 500000, "max": 1000000, "rate": 20, "fixed": 12500 },
+        { "min": 1000000, "max": null, "rate": 30, "fixed": 112500 }
+      ],
+      "senior": [
+        { "min": 0, "max": 300000, "rate": 0, "fixed": 0 },
+        { "min": 300000, "max": 500000, "rate": 5, "fixed": 0 },
+        { "min": 500000, "max": 1000000, "rate": 20, "fixed": 10000 },
+        { "min": 1000000, "max": null, "rate": 30, "fixed": 110000 }
+      ],
+      "super_senior": [
+        { "min": 0, "max": 500000, "rate": 0, "fixed": 0 },
+        { "min": 500000, "max": 1000000, "rate": 20, "fixed": 0 },
+        { "min": 1000000, "max": null, "rate": 30, "fixed": 100000 }
+      ]
+    }
+  },
+  "standard_deduction": {
+    "new_regime": 75000,
+    "old_regime": 50000
+  },
+  "rebates": {
+    "section_87a": {
+      "new_regime": { "limit": 1200000, "max_rebate": 60000 },
+      "old_regime": { "limit": 500000, "max_rebate": 12500 }
+    }
+  },
+  "cess_rate": 0.04,
+  "sections": [
+    {
+      "id": "sec_80c",
+      "section": "80C",
+      "title": "Deduction in respect of life insurance premia, deferred annuity, contributions to provident fund, subscription to certain equity shares or debentures, etc.",
+      "description": "Allows a deduction up to ₹1,50,000 for various investments and expenses including EPF, PPF, ELSS mutual funds, LIC premiums, home loan principal repayment, and school tuition fees for children.",
+      "limit": 150000,
+      "regimes": ["old"],
+      "subcategories": ["epf", "ppf", "elss", "lic", "tuition", "housing_principal"],
+      "eligibility": "Individual and HUF taxpayers.",
+      "citation": "Income Tax Act, 1961 - Section 80C"
+    },
+    {
+      "id": "sec_80d",
+      "section": "80D",
+      "title": "Deduction in respect of health insurance premia",
+      "description": "Deduction for medical insurance premiums paid for self, family, and parents. Standard limit is ₹25,000 for self/family and an additional ₹25,000 for parents. If parents are senior citizens (aged 60+), the limit is ₹50,000. If the taxpayer is also a senior citizen, the limit is ₹50,000 for self/family, making the maximum deduction ₹1,00,000.",
+      "limit": 100000,
+      "regimes": ["old"],
+      "eligibility": "Individuals paying health insurance premium, preventive health checkup cost (up to ₹5,000), or medical expenditure of senior citizens with no health insurance.",
+      "citation": "Income Tax Act, 1961 - Section 80D"
+    },
+    {
+      "id": "sec_80ccd_1b",
+      "section": "80CCD(1B)",
+      "title": "Deduction in respect of voluntary contribution to National Pension System (NPS)",
+      "description": "An additional deduction of up to ₹50,000 is allowed for contributions made to the NPS (Tier-1 account). This deduction is over and above the ₹1,50,000 limit of Section 80C.",
+      "limit": 50000,
+      "regimes": ["old"],
+      "eligibility": "Individual taxpayers who make voluntary contributions to NPS Tier-1.",
+      "citation": "Income Tax Act, 1961 - Section 80CCD(1B)"
+    },
+    {
+      "id": "sec_80e",
+      "section": "80E",
+      "title": "Deduction in respect of interest on loan taken for higher education",
+      "description": "Allows deduction of interest paid on loans taken for higher education of self, spouse, children, or a student for whom the individual is a legal guardian. There is no upper limit on the interest amount that can be claimed.",
+      "limit": null,
+      "regimes": ["old"],
+      "eligibility": "Interest paid on loan taken from financial institutions/approved charitable institutions. Available for 8 years or until interest is fully paid.",
+      "citation": "Income Tax Act, 1961 - Section 80E"
+    },
+    {
+      "id": "sec_80g",
+      "section": "80G",
+      "title": "Deductions in respect of donations to certain funds, charitable institutions, etc.",
+      "description": "Allows a tax deduction for donations made to specified charitable organizations and relief funds. Deductions are either 50% or 100% of the donated amount, with or without restrictions (typically capped at 10% of Adjusted Gross Total Income). Cash donations exceeding ₹2,000 are not eligible.",
+      "limit": null,
+      "regimes": ["old"],
+      "eligibility": "All taxpayers making donations via digital modes or bank drafts/cheques to registered 80G entities.",
+      "citation": "Income Tax Act, 1961 - Section 80G"
+    },
+    {
+      "id": "sec_80eea",
+      "section": "80EEA",
+      "title": "Deduction in respect of interest on loan taken for certain house property",
+      "description": "An additional deduction of up to ₹1,50,000 for interest on home loans taken by first-time home buyers. The loan must have been sanctioned between April 1, 2019, and March 31, 2023. The stamp duty value of the residential property must not exceed ₹45 Lakh.",
+      "limit": 150000,
+      "regimes": ["old"],
+      "eligibility": "First-time buyers. Must not own any other residential property on the date of loan sanction.",
+      "citation": "Income Tax Act, 1961 - Section 80EEA"
+    },
+    {
+      "id": "sec_80tta",
+      "section": "80TTA",
+      "title": "Deduction in respect of interest on deposits in savings account",
+      "description": "Deduction of up to ₹10,000 on interest earned from savings bank accounts with banks, co-operative societies, or post offices. Not applicable to senior citizens who qualify for Section 80TTB.",
+      "limit": 10000,
+      "regimes": ["old"],
+      "eligibility": "Individual (under 60 years) and HUF. Applies to savings account interest only.",
+      "citation": "Income Tax Act, 1961 - Section 80TTA"
+    },
+    {
+      "id": "sec_80ttb",
+      "section": "80TTB",
+      "title": "Deduction in respect of interest on deposits in case of senior citizens",
+      "description": "A higher deduction of up to ₹50,000 on interest earned from all deposits (savings bank accounts, fixed deposits, recurring deposits) with banks, co-operative societies, or post offices for resident senior citizens.",
+      "limit": 50000,
+      "regimes": ["old"],
+      "eligibility": "Resident senior citizens aged 60 years and above at any time during the financial year.",
+      "citation": "Income Tax Act, 1961 - Section 80TTB"
+    },
+    {
+      "id": "sec_80u",
+      "section": "80U",
+      "title": "Deduction in case of a person with disability",
+      "description": "Flat deduction for resident individuals certified with a physical disability (including blindness) or mental retardation. Standard disability (>= 40%): ₹75,000. Severe disability (>= 80%): ₹1,25,000.",
+      "limit": 125000,
+      "regimes": ["old"],
+      "eligibility": "Resident individuals with a valid medical certificate from a government medical authority.",
+      "citation": "Income Tax Act, 1961 - Section 80U"
+    },
+    {
+      "id": "sec_24b",
+      "section": "24(b)",
+      "title": "Deduction on home loan interest for self-occupied or rented property",
+      "description": "Deduction on the interest component of home loan repayment. For self-occupied property, the limit is ₹2,00,000. For rented out property, there is no limit, but the net loss under 'Income from House Property' that can be set off against other heads of income is capped at ₹2,00,000 per year.",
+      "limit": 200000,
+      "regimes": ["old"],
+      "eligibility": "Homeowners paying interest on home loan.",
+      "citation": "Income Tax Act, 1961 - Section 24(b)"
+    },
+    {
+      "id": "hra_exemption",
+      "section": "HRA",
+      "title": "House Rent Allowance Exemption",
+      "description": "Exemption on House Rent Allowance received by salaried employees. The exempt amount is the minimum of three values: (1) Actual HRA received, (2) Rent paid minus 10% of basic salary, (3) 50% of basic salary for metro cities (Delhi, Mumbai, Kolkata, Chennai) or 40% for non-metro cities.",
+      "limit": null,
+      "regimes": ["old"],
+      "eligibility": "Salaried individuals who live in rented accommodation and receive HRA.",
+      "citation": "Income Tax Rules, 1962 - Rule 2A"
+    }
+  ]
+}

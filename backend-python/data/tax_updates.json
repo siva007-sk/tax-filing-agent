@@ -1,0 +1,33 @@
+{
+  "status": "ok",
+  "error": null,
+  "last_updated": "2026-06-07T16:06:18.571217+00:00",
+  "next_update": "2026-06-08T16:06:18.571217+00:00",
+  "update_count": 3,
+  "updates": [
+    {
+      "title": "New Tax Regime Calculator (FY 2026-27)",
+      "snippet": "Calculate your income tax under the new tax regime for FY 2026-27 (AY 2027-28). No changes in tax slabs from FY 2025-26. Includes standard deduction of ₹75,000, NPS deduction under 80CCD (2), and …",
+      "url": "https://fincalculator.in/new-regime-income-tax-calculator/2026-27",
+      "source": "fincalculator.in",
+      "relevance": 8,
+      "fetched_at": "2026-06-07T16:06:13.230492+00:00"
+    },
+    {
+      "title": "Income Tax Calculator - Calculate Your Taxes for FY 2026-27 - ClearTax",
+      "snippet": "Feb 1, 2026 · Under the Income Tax Act, 2025, the provisions of the new tax regimes are dealt under section 202. Though it offers limited deductions and exemptions, this regime is more beneficial for …",
+      "url": "https://cleartax.in/paytax/taxcalculator",
+      "source": "cleartax.in",
+      "relevance": 5,
+      "fetched_at": "2026-06-07T16:06:13.230334+00:00"
+    },
+    {
+      "title": "Home | Income Tax Department",
+      "snippet": "May 30, 2026 · With this enhancement, taxpayers can conveniently make payments under the existing Income‑tax Act, 1961 for dues up to FY 2025‑26, as well as under the Income‑tax Act, 2025 for Tax …",
+      "url": "https://www.incometax.gov.in/iec/foportal/",
+      "source": "incometax.gov.in",
+      "relevance": 2,
+      "fetched_at": "2026-06-07T16:06:13.230102+00:00"
+    }
+  ]
+}
