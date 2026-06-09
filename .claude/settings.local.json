@@ -19,7 +19,8 @@
       "PowerShell(python \"D:\\\\ai course\\\\tax-filing-agent\\\\backend-python\\\\test_patterns.py\" 2>&1)",
       "PowerShell(python \"D:\\\\ai course\\\\tax-filing-agent\\\\backend-python\\\\test_patterns.py\")",
       "Bash(python -c ' *)",
-      "Bash(node_modules/.bin/eslint --version)"
+      "Bash(node_modules/.bin/eslint --version)",
+      "Bash(npm ls *)"
     ]
   }
 }
