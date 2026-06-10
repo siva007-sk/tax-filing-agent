@@ -1,9 +1,6 @@
 from datetime import UTC, datetime
-import os
 
-import httpx
-
-LLM_URL = os.getenv("LLM_URL", "http://localhost:8080/v1/chat/completions")
+from services.rag_service import call_llm
 
 
 async def review_itr(profile: dict, tax_data: dict) -> dict:
@@ -134,28 +131,20 @@ async def review_itr(profile: dict, tax_data: dict) -> dict:
             f"Tax Liability: ₹{computed_tax:,}, TDS Paid: ₹{total_tds:,}, "
             f"80C: ₹{total_80c:,}, Flags: {len(flags)} ({flag_text})"
         )
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                LLM_URL,
-                json={
-                    "model": "local-model",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a senior Indian tax expert and Chartered Accountant. "
-                                "Write a concise 3-4 sentence professional ITR review summary. "
-                                "End with the verdict: READY TO FILE, NEEDS REVIEW, or REQUIRES CORRECTION."
-                            ),
-                        },
-                        {"role": "user", "content": f"Review this ITR for AY 2026-27: {summary_text}"},
-                    ],
-                    "temperature": 0.2,
-                    "stream": False,
+        ai_narrative = await call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a senior Indian tax expert and Chartered Accountant. "
+                        "Write a concise 3-4 sentence professional ITR review summary. "
+                        "End with the verdict: READY TO FILE, NEEDS REVIEW, or REQUIRES CORRECTION."
+                    ),
                 },
-            )
-            if resp.status_code == 200:
-                ai_narrative = resp.json()["choices"][0]["message"]["content"]
+                {"role": "user", "content": f"Review this ITR for AY 2026-27: {summary_text}"},
+            ],
+            temperature=0.2,
+        )
     except Exception as exc:
         print(f"AI review LLM error: {exc}")
 

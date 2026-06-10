@@ -14,8 +14,10 @@ export default function Settings({ onClearMemory }) {
   const [corpusStatus, setCorpusStatus] = useState(null);
   const [refreshing, setRefreshing]     = useState(false);
 
-  const [llmUrl,   setLlmUrl]   = useState('');
-  const [llmModel, setLlmModel] = useState('');
+  const [llmUrl,      setLlmUrl]      = useState('');
+  const [llmModel,    setLlmModel]    = useState('');
+  const [llmProvider, setLlmProvider] = useState('openai');
+  const [llmApiKey,   setLlmApiKey]   = useState('');
   const [llmSaving,  setLlmSaving]  = useState(false);
   const [llmTesting, setLlmTesting] = useState(false);
   const [llmStatus,  setLlmStatus]  = useState(null); // null | { reachable, error }
@@ -40,7 +42,12 @@ export default function Settings({ onClearMemory }) {
   useEffect(() => {
     fetch('/api/v1/llm/config')
       .then(r => r.json())
-      .then(d => { setLlmUrl(d.url); setLlmModel(d.model); })
+      .then(d => {
+        setLlmUrl(d.url);
+        setLlmModel(d.model);
+        setLlmProvider(d.provider || 'openai');
+        setLlmApiKey(d.api_key || '');
+      })
       .catch(() => {});
   }, []);
 
@@ -51,7 +58,7 @@ export default function Settings({ onClearMemory }) {
       await fetch('/api/v1/llm/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: llmUrl, model: llmModel }),
+        body: JSON.stringify({ url: llmUrl, model: llmModel, provider: llmProvider, api_key: llmApiKey }),
       });
       setLlmSaved(true);
       setLlmStatus(null);
@@ -71,7 +78,7 @@ export default function Settings({ onClearMemory }) {
       await fetch('/api/v1/llm/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: llmUrl, model: llmModel }),
+        body: JSON.stringify({ url: llmUrl, model: llmModel, provider: llmProvider, api_key: llmApiKey }),
       });
       const res  = await fetch('/api/v1/llm/test', { method: 'POST' });
       const data = await res.json();
@@ -122,7 +129,40 @@ export default function Settings({ onClearMemory }) {
               type="text"
               value={llmModel}
               onChange={e => { setLlmModel(e.target.value); setLlmStatus(null); }}
-              placeholder="local-model"
+              placeholder={llmProvider === 'anthropic' ? 'claude-sonnet-4-6' : 'local-model'}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Provider</label>
+            <select
+              value={llmProvider}
+              onChange={e => {
+                const p = e.target.value;
+                setLlmProvider(p);
+                setLlmStatus(null);
+                if (p === 'anthropic') {
+                  setLlmUrl('https://api.anthropic.com/v1/messages');
+                  if (!llmModel || llmModel === 'local-model') setLlmModel('claude-sonnet-4-6');
+                } else if (p === 'openai' && llmUrl === 'https://api.anthropic.com/v1/messages') {
+                  setLlmUrl('http://localhost:8080/v1/chat/completions');
+                }
+              }}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-indigo-500 transition-colors"
+            >
+              <option value="openai">OpenAI-compatible (local / Groq / OpenAI / Together)</option>
+              <option value="anthropic">Anthropic (Claude API)</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              API Key <span className="text-gray-600 font-normal normal-case">(leave blank for local models)</span>
+            </label>
+            <input
+              type="password"
+              value={llmApiKey}
+              onChange={e => { setLlmApiKey(e.target.value); setLlmStatus(null); }}
+              placeholder={llmProvider === 'anthropic' ? 'sk-ant-api03-...' : 'sk-... (optional)'}
               className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>

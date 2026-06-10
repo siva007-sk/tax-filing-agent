@@ -106,11 +106,21 @@ Without a running LLM the RAG chat returns a clear error instead of replying.
 
 ### Tax Computation Rules (FY 2025-26 / AY 2026-27)
 
-**New regime:** ₹75,000 standard deduction; slabs 0/5/10/15/20/25/30% for bands up to ₹4L/8L/12L/16L/20L/24L/24L+; 87A rebate (up to ₹60,000) if taxable income ≤ ₹12L; no Chapter VI-A deductions.
+**New regime:** ₹75,000 standard deduction (capped at gross salary); slabs 0/5/10/15/20/25/30% for bands ₹0-4L/4-8L/8-12L/12-16L/16-20L/20-24L/24L+; 87A rebate up to ₹60,000 if total taxable income ≤ ₹12L (with marginal relief for incomes slightly above ₹12L); no Chapter VI-A deductions.
 
-**Old regime:** ₹50,000 standard deduction; age-based slabs (general / senior ≥60 / super-senior ≥80); full Chapter VI-A deductions (80C ₹1.5L, 80D up to ₹1L, 80CCD(1B) ₹50K extra, etc.).
+**Old regime:** ₹50,000 standard deduction; age-based slabs (general / senior ≥60 / super-senior ≥80); full Chapter VI-A deductions (80C ₹1.5L, 80D up to ₹1L, 80CCD(1B) ₹50K extra, etc.); 87A rebate ₹12,500 if total income ≤ ₹5L (rebate applies to slab tax only, not STCG/LTCG).
 
-Both regimes always computed; API returns the optimal regime with savings delta. **All limits are DB-driven** — the LLM can update them automatically when new regulations are detected.
+**Capital gains (both regimes, Finance Act 2024 — effective 23 Jul 2024):**
+- STCG u/s 111A: 20% flat (equity/equity MF, held ≤ 12 months). NOT included in slab income.
+- LTCG u/s 112A: 12.5% on gains above ₹1,25,000 exemption (equity/equity MF, held > 12 months). NOT included in slab income.
+
+**Surcharge (both regimes, AY 2026-27):** 0% ≤₹50L | 5% ₹50L-1Cr | 15% ₹1-2Cr | 25% ₹2-5Cr | 25%/37% >₹5Cr (new/old). Applied after 87A rebate, before cess.
+
+**Cess:** 4% health & education cess on (tax after rebate + surcharge).
+
+**Family pension:** Deduction u/s 57(iia) — lower of ⅓ of pension or ₹15,000 — applied under both regimes before slab computation.
+
+Both regimes always computed; API returns the optimal regime with savings delta. **All slab limits are DB-driven** — the LLM can update them automatically when new regulations are detected.
 
 ### ITR Form Selection Logic
 

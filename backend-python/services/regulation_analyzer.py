@@ -7,8 +7,6 @@ regulation changes, apply scalar changes to the DB, and invalidate engine caches
 import json
 import re
 
-import httpx
-
 from database import (
     add_regulation_change,
     get_tax_rules,
@@ -145,38 +143,15 @@ def _extract_json(text: str) -> dict | None:
     return None
 
 
-async def _call_llm(prompt: str, llm_cfg: dict) -> str | None:
-    messages = [{"role": "user", "content": prompt}]
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(
-                llm_cfg["url"],
-                json={
-                    "model": llm_cfg["model"],
-                    "messages": messages,
-                    "temperature": 0.0,
-                    "max_tokens": 800,
-                    "stream": False,
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-    except Exception as exc:
-        print(f"[RegAnalyzer] LLM call failed: {exc}")
-        return None
-
-
 async def analyze_and_apply_new_updates() -> dict:
     """
     Analyze all unanalyzed tax-update articles with the LLM.
     Apply detected changes to the DB and invalidate engine caches.
     Returns a summary dict.
     """
-    from services.rag_service import get_llm_config, invalidate_corpus_cache
+    from services.rag_service import call_llm, invalidate_corpus_cache
     from services.calculation_engine import invalidate_rules_cache
 
-    llm_cfg = get_llm_config()
     articles = get_unanalyzed_updates(limit=10)
 
     if not articles:
@@ -191,9 +166,10 @@ async def analyze_and_apply_new_updates() -> dict:
             snippet=(article.get("snippet") or "")[:600],
         )
 
-        raw = await _call_llm(prompt, llm_cfg)
-        if raw is None:
-            # LLM unavailable — leave unanalyzed so next run can retry
+        try:
+            raw = await call_llm([{"role": "user", "content": prompt}], temperature=0.0, max_tokens=800)
+        except Exception as exc:
+            print(f"[RegAnalyzer] LLM call failed: {exc}")
             continue
 
         parsed = _extract_json(raw)

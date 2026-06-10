@@ -39,8 +39,10 @@ def invalidate_corpus_cache() -> None:
 # ── LLM config ─────────────────────────────────────────────────────────────────
 
 _llm_config: dict = {
-    "url":   LLM_URL,
-    "model": LLM_MODEL,
+    "url":      LLM_URL,
+    "model":    LLM_MODEL,
+    "provider": "openai",
+    "api_key":  "",
 }
 
 
@@ -48,10 +50,55 @@ def get_llm_config() -> dict:
     return dict(_llm_config)
 
 
-def update_llm_config(url: str, model: str) -> dict:
-    _llm_config["url"]   = url.strip()
-    _llm_config["model"] = model.strip()
+def update_llm_config(url: str, model: str, provider: str = "openai", api_key: str = "") -> dict:
+    _llm_config["url"]      = url.strip()
+    _llm_config["model"]    = model.strip()
+    _llm_config["provider"] = provider.strip() or "openai"
+    if api_key.strip():
+        _llm_config["api_key"] = api_key.strip()
     return dict(_llm_config)
+
+
+async def call_llm(messages: list, temperature: float = 0.3, max_tokens: int | None = None) -> str:
+    """Call the configured LLM. Supports OpenAI-compatible and Anthropic formats. Raises on failure."""
+    url      = _llm_config["url"]
+    model    = _llm_config["model"]
+    provider = _llm_config.get("provider", "openai")
+    api_key  = _llm_config.get("api_key", "")
+
+    headers: dict = {"Content-Type": "application/json"}
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        if provider == "anthropic":
+            headers["x-api-key"] = api_key
+            headers["anthropic-version"] = "2023-06-01"
+            system = next((m["content"] for m in messages if m["role"] == "system"), None)
+            user_messages = [m for m in messages if m["role"] != "system"]
+            body: dict = {
+                "model": model,
+                "messages": user_messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens or 1024,
+            }
+            if system:
+                body["system"] = system
+            resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()["content"][0]["text"]
+        else:
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            body = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "stream": False,
+            }
+            if max_tokens:
+                body["max_tokens"] = max_tokens
+            resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
 
 
 # ── keyword map ────────────────────────────────────────────────────────────────
@@ -196,30 +243,22 @@ async def get_rag_response(query: str, chat_history: list | None = None) -> dict
         {"role": "user", "content": query},
     ]
 
-    url   = _llm_config["url"]
-    model = _llm_config["model"]
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                url,
-                json={"model": model, "messages": messages, "temperature": 0.3, "stream": False},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return {
-                "answer": data["choices"][0]["message"]["content"],
-                "citations": [
-                    {"section": c["section"], "citation": c["citation"], "title": c["title"]}
-                    for c in context_chunks
-                ],
-                "sources_found": len(context_chunks) > 0,
-            }
+        answer = await call_llm(messages, temperature=0.3)
+        return {
+            "answer": answer,
+            "citations": [
+                {"section": c["section"], "citation": c["citation"], "title": c["title"]}
+                for c in context_chunks
+            ],
+            "sources_found": len(context_chunks) > 0,
+        }
     except Exception as exc:
         print(f"LLM unavailable: {exc}")
         return {
             "answer": None,
             "error": "llm_unavailable",
-            "message": f"The local LLM is not reachable at {url}. Please start your local model and try again.",
+            "message": f"LLM is not reachable at {_llm_config['url']}. Check your endpoint and API key in Settings.",
             "citations": [],
             "sources_found": False,
         }

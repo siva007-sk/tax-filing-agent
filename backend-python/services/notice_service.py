@@ -1,8 +1,4 @@
-import os
-
-import httpx
-
-LLM_URL = os.getenv("LLM_URL", "http://localhost:8080/v1/chat/completions")
+from services.rag_service import call_llm
 
 _FALLBACK = """Unable to analyze notice (AI model unavailable).
 
@@ -41,27 +37,20 @@ async def analyze_notice(notice_text: str, profile: dict) -> dict:
     )
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = await client.post(
-                LLM_URL,
-                json={
-                    "model": "local-model",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a senior Indian tax advocate with expertise in income tax assessments, "
-                                "notices, and appeals. Provide accurate, actionable guidance structured exactly as requested."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.15,
-                    "stream": False,
+        analysis = await call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a senior Indian tax advocate with expertise in income tax assessments, "
+                        "notices, and appeals. Provide accurate, actionable guidance structured exactly as requested."
+                    ),
                 },
-            )
-            if resp.status_code == 200:
-                return {"success": True, "analysis": resp.json()["choices"][0]["message"]["content"]}
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.15,
+        )
+        return {"success": True, "analysis": analysis}
     except Exception as exc:
         print(f"Notice analysis LLM error: {exc}")
 

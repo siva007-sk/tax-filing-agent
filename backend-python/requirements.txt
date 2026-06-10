@@ -14,5 +14,8 @@ python-dotenv==1.2.2
 # Background job scheduler
 APScheduler==3.11.2
 
+# PDF text extraction for Form 16 / 26AS / AIS parsing
+pypdf==5.4.0
+
 # Web search for tax law updates (optional — graceful fallback if absent)
 duckduckgo-search==8.1.1

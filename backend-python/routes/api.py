@@ -17,7 +17,7 @@ from services.calculation_engine import compute_tax
 from services.discovery_engine import discover_deductions
 from services.document_parser import parse_document, reconcile_documents
 from services.notice_service import analyze_notice
-from services.rag_service import get_llm_config, get_rag_response, search_corpus, update_llm_config
+from services.rag_service import call_llm, get_llm_config, get_rag_response, search_corpus, update_llm_config
 from services.tax_updater import get_status as get_corpus_status
 from services.tax_updater import run_update as run_corpus_update
 from services.tds_service import calculate_26qb
@@ -481,31 +481,26 @@ def llm_config_get():
 
 @router.post("/llm/config")
 async def llm_config_set(request: Request):
-    body  = await request.json()
-    url   = (body.get("url")   or "").strip()
-    model = (body.get("model") or "").strip()
+    body     = await request.json()
+    url      = (body.get("url")      or "").strip()
+    model    = (body.get("model")    or "").strip()
+    provider = (body.get("provider") or "openai").strip()
+    api_key  = (body.get("api_key")  or "")
     if not url:
         raise HTTPException(status_code=400, detail="url is required")
     if not model:
         raise HTTPException(status_code=400, detail="model is required")
-    return update_llm_config(url, model)
+    return update_llm_config(url, model, provider, api_key)
 
 
 @router.post("/llm/test")
 async def llm_test():
-    import httpx as _httpx
     cfg = get_llm_config()
     try:
-        async with _httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(
-                cfg["url"],
-                json={"model": cfg["model"], "messages": [{"role": "user", "content": "ping"}],
-                      "max_tokens": 1, "stream": False},
-            )
-            resp.raise_for_status()
-        return {"reachable": True, "url": cfg["url"], "model": cfg["model"]}
+        await call_llm([{"role": "user", "content": "ping"}], temperature=0.0, max_tokens=5)
+        return {"reachable": True, "url": cfg["url"], "model": cfg["model"], "provider": cfg.get("provider", "openai")}
     except Exception as exc:
-        return {"reachable": False, "url": cfg["url"], "model": cfg["model"], "error": str(exc)}
+        return {"reachable": False, "url": cfg["url"], "model": cfg["model"], "provider": cfg.get("provider", "openai"), "error": str(exc)}
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
