@@ -1,35 +1,42 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, FileText, MessageSquare, Settings as SettingsIcon, Sparkles, BarChart2 } from 'lucide-react';
+import { Home, FileText, MessageSquare, BarChart2, User, Sparkles } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import TaxFiling from './components/TaxFiling';
 import Chatbot from './components/Chatbot';
 import Settings from './components/Settings';
 import Reports from './components/Reports';
+import AdminPanel from './components/AdminPanel';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard',   icon: LayoutDashboard },
-  { id: 'filing',    label: 'File Taxes',  icon: FileText },
-  { id: 'advisor',   label: 'Tax Advisor', icon: MessageSquare },
-  { id: 'reports',   label: 'Reports',     icon: BarChart2 },
-  { id: 'settings',  label: 'Settings',    icon: SettingsIcon },
+  { id: 'dashboard', label: 'Home',    icon: Home },
+  { id: 'filing',    label: 'File',    icon: FileText },
+  { id: 'advisor',   label: 'Mitra',   icon: MessageSquare },
+  { id: 'reports',   label: 'Reports', icon: BarChart2 },
+  { id: 'profile',   label: 'Profile', icon: User },
 ];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [profile, setProfile] = useState(null);
-  const [taxData, setTaxData] = useState(null);
+  const [profile, setProfile]     = useState(null);
+  const [taxData, setTaxData]     = useState(null);
+  const [theme, setTheme]         = useState(() => localStorage.getItem('theme') || 'dark');
 
-  // Defined before useEffect so the hook closure captures the stable reference
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
   const loadContext = async () => {
     try {
-      const profRes = await fetch('/api/v1/memory/profile');
+      const profRes  = await fetch('/api/v1/memory/profile');
       const profData = await profRes.json();
       setProfile(profData);
-
       const taxRes = await fetch('/api/v1/tax/calculate', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profData),
+        body:    JSON.stringify(profData),
       });
       setTaxData(await taxRes.json());
     } catch (err) {
@@ -53,58 +60,137 @@ export default function App() {
   if (!profile || !taxData) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-950">
-        <div className="flex flex-col items-center gap-3 text-gray-400">
-          <Sparkles className="animate-spin text-indigo-400" size={32} />
-          <span className="text-sm font-medium">Loading tax agent context...</span>
+        <div className="flex flex-col items-center gap-4 text-gray-400">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 flex items-center justify-center">
+            <Sparkles className="text-indigo-400 animate-pulse" size={26} />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-300">Setting up Mitra</p>
+            <p className="text-xs text-gray-500 mt-1">Loading your tax context…</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="mx-6 mt-4 px-6 py-3 bg-gray-900 border border-gray-800 rounded-xl flex justify-between items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="bg-indigo-600 p-2 rounded-xl flex items-center justify-center">
-            <Sparkles size={17} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-gray-100">TAX ME</h1>
-            <p className="text-xs text-gray-500">AY 2026-27 · FY 2025-26</p>
+    <div className="flex min-h-screen bg-gray-950">
+
+      {/* ── Desktop Sidebar ────────────────────────────────────────────────── */}
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-[220px] bg-gray-900 border-r border-gray-800 z-30">
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 p-2 rounded-xl flex items-center justify-center">
+              <Sparkles size={15} color="#fff" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-gray-100">TAX ME</h1>
+              <p className="text-xs text-gray-500">AY 2026-27</p>
+            </div>
           </div>
         </div>
 
-        <nav className="flex gap-0.5 bg-gray-950 p-1 rounded-lg border border-gray-800">
-          {NAV.map(({ id, label, icon: Icon }) => (
+        {/* Nav items */}
+        <nav className="flex-1 flex flex-col gap-1 p-3 pt-4">
+          {NAV.slice(0, 4).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              className={`tab-btn px-3 py-2 text-xs ${activeTab === id ? 'active' : ''}`}
               onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full ${
+                activeTab === id
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
             >
-              <Icon size={13} />
-              <span className="hidden sm:inline">{label}</span>
+              <Icon size={18} strokeWidth={activeTab === id ? 2.5 : 1.8} />
+              {label}
             </button>
           ))}
         </nav>
-      </header>
 
-      <main className="flex-1 px-6 pb-6 pt-4 overflow-y-auto">
-        {activeTab === 'dashboard' && (
-          <Dashboard profile={profile} taxData={taxData} setTab={setActiveTab} />
-        )}
-        {activeTab === 'filing' && (
-          <TaxFiling
-            profile={profile}
-            setProfile={setProfile}
-            taxData={taxData}
-            setTaxData={setTaxData}
-            setTab={setActiveTab}
-          />
-        )}
-        {activeTab === 'advisor'   && <Chatbot />}
-        {activeTab === 'reports'   && <Reports />}
-        {activeTab === 'settings'  && <Settings onClearMemory={handleClearMemory} />}
+        {/* Profile at bottom */}
+        <div className="p-3 border-t border-gray-800">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full ${
+              activeTab === 'profile' || activeTab === 'admin'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            }`}
+          >
+            <User size={18} strokeWidth={activeTab === 'profile' ? 2.5 : 1.8} />
+            Profile
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main Content ───────────────────────────────────────────────────── */}
+      <main className="flex-1 lg:ml-[220px] min-h-screen">
+        {/* Mobile header */}
+        <div className="lg:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-indigo-600 p-1.5 rounded-lg">
+              <Sparkles size={13} color="#fff" />
+            </div>
+            <span className="text-sm font-bold text-gray-100">TAX ME</span>
+            <span className="text-xs text-gray-500">AY 2026-27</span>
+          </div>
+        </div>
+
+        {/* Page content */}
+        <div className="px-4 lg:px-8 pt-4 lg:pt-6 pb-28 lg:pb-8">
+          {activeTab === 'dashboard' && (
+            <Dashboard profile={profile} taxData={taxData} setTab={setActiveTab} />
+          )}
+          {activeTab === 'filing' && (
+            <TaxFiling
+              profile={profile}
+              setProfile={setProfile}
+              taxData={taxData}
+              setTaxData={setTaxData}
+              setTab={setActiveTab}
+            />
+          )}
+          {activeTab === 'advisor'  && <Chatbot />}
+          {activeTab === 'reports'  && <Reports setTab={setActiveTab} />}
+          {activeTab === 'profile'  && <Settings onClearMemory={handleClearMemory} setTab={setActiveTab} theme={theme} toggleTheme={toggleTheme} />}
+          {activeTab === 'admin'    && <AdminPanel />}
+        </div>
       </main>
+
+      {/* ── Mobile Bottom Nav ──────────────────────────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur border-t border-gray-800 z-30">
+        <div
+          className="flex items-center justify-around px-1"
+          style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))', paddingTop: '8px' }}
+        >
+          {NAV.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 min-w-[56px] ${
+                activeTab === id || (id === 'profile' && activeTab === 'admin')
+                  ? 'text-indigo-400'
+                  : 'text-gray-500'
+              }`}
+            >
+              <div className={`p-1.5 rounded-xl transition-all ${
+                activeTab === id || (id === 'profile' && activeTab === 'admin')
+                  ? 'bg-indigo-600/20'
+                  : ''
+              }`}>
+                <Icon
+                  size={20}
+                  strokeWidth={activeTab === id || (id === 'profile' && activeTab === 'admin') ? 2.5 : 1.8}
+                />
+              </div>
+              <span className="text-[10px] font-semibold">{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
     </div>
   );
 }

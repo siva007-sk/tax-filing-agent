@@ -158,7 +158,7 @@ function StepBar({ step }) {
 }
 
 export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, setTab }) {
-  const [step, setStep]     = useState(0);       // 0=entry, 1=income, 2=deductions, 3=taxpaid, 4=results
+  const [step, setStep]     = useState(0);
   const [form, setForm]     = useState(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
   const [calculating, setCal]     = useState(false);
@@ -169,7 +169,6 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
   const [saving, setSaving]   = useState(false);
   const [savedId, setSavedId] = useState(null);
 
-  // ── helpers ─────────────────────────────────────────────────────────────────
   const setIncome   = (path, val) => setForm(f => ({ ...f, income:     { ...f.income,     [path[0]]: { ...f.income[path[0]],     [path[1]]: val } } }));
   const setDed      = (key, val)  => setForm(f => ({ ...f, deductions: { ...f.deductions, [key]: val } }));
   const setDed80C   = (k, val)    => setForm(f => ({ ...f, deductions: { ...f.deductions, '80C': { breakdown: { ...f.deductions['80C'].breakdown, [k]: val } } } }));
@@ -178,7 +177,6 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
   const setTaxPaid  = (k, val)    => setForm(f => ({ ...f, tax_paid:   { ...f.tax_paid,   [k]: val } }));
   const setPersonal = (k, val)    => setForm(f => ({ ...f, personal:   { ...f.personal,   [k]: val } }));
 
-  // ── Form 16 upload ───────────────────────────────────────────────────────────
   const handleForm16Upload = async (file) => {
     if (!file) return;
     setUploading(true);
@@ -213,7 +211,6 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     }
   };
 
-  // ── Calculate & generate ITR ─────────────────────────────────────────────────
   const handleCalculate = async () => {
     setCal(true);
     const profile = toProfile(form);
@@ -227,7 +224,6 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       setResult(taxData);
       setItr(itrData);
       setSug(suggestItrForm(profile));
-      // Update global session so dashboard refreshes
       await fetch('/api/v1/memory/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
       setGlobalProfile(profile);
       setTaxData(taxData);
@@ -295,50 +291,80 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     a.click();
   };
 
-  // ── STEP 0: entry mode ───────────────────────────────────────────────────────
+  // STEP 0: entry mode
   if (step === 0) return (
-    <div className="animate-fade-in max-w-2xl mx-auto flex flex-col gap-6 pt-4">
+    <div className="animate-fade-in flex flex-col gap-5 pt-2">
       <div>
-        <h2 className="text-2xl font-extrabold text-gray-100">File Your ITR — AY 2026-27</h2>
-        <p className="text-gray-400 text-sm mt-1">Choose how you'd like to start. You can edit any pre-filled data before submitting.</p>
+        <h2 className="text-xl font-bold text-gray-100">How would you like to file?</h2>
+        <p className="text-sm text-gray-400 mt-1">Choose the option that works best for you.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label className="card p-6 flex flex-col gap-3 border-2 border-transparent hover:border-indigo-500/50 cursor-pointer transition-all group">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Chat as hero – primary CTA */}
+        <button
+          className="card p-6 border-2 border-indigo-600/50 bg-indigo-600/5 hover:border-indigo-500 hover:bg-indigo-600/10 cursor-pointer transition-all text-left group flex flex-col"
+          onClick={() => setTab('advisor')}
+        >
+          <div className="text-3xl bg-indigo-600/20 p-3 rounded-xl group-hover:bg-indigo-600/30 transition-colors w-fit mb-4">
+            🤖
+          </div>
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="font-bold text-gray-100">Chat with Mitra</span>
+            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-full uppercase tracking-wide">
+              Recommended
+            </span>
+          </div>
+          <p className="text-sm text-gray-400 leading-relaxed flex-1">
+            "Just tell me about your income and I'll handle the forms."
+          </p>
+          <p className="text-xs text-gray-500 mt-3">Takes 3–5 minutes</p>
+        </button>
+
+        {/* Upload Form 16 */}
+        <label className="card p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 cursor-pointer transition-all group flex flex-col">
           <input type="file" accept=".pdf,.jpg,.png" className="hidden" onChange={e => handleForm16Upload(e.target.files[0])} />
-          <div className="bg-indigo-500/15 p-3 rounded-xl w-fit text-indigo-400 group-hover:bg-indigo-500/25 transition-colors">
-            <Upload size={24} />
+          <div className="text-3xl bg-gray-800 p-3 rounded-xl group-hover:bg-gray-700 transition-colors w-fit mb-4">
+            📄
           </div>
-          <div>
-            <div className="font-bold text-gray-100 text-sm">Upload Form 16</div>
-            <div className="text-xs text-gray-400 mt-1 leading-relaxed">Auto-extract salary, TDS, and deductions from your employer-issued Form 16.</div>
-          </div>
+          <span className="font-bold text-gray-100 mb-2">Upload Form 16</span>
+          <p className="text-sm text-gray-400 leading-relaxed flex-1">
+            Have your employer's Form 16? I'll read it and fill everything automatically.
+          </p>
+          <p className="text-xs text-gray-500 mt-3">Usually takes 30 seconds</p>
           {uploading && (
-            <div className="flex items-center gap-2 text-xs text-indigo-400">
-              <Loader size={12} className="animate-spin" /> Extracting data...
+            <div className="flex items-center gap-2 text-xs text-indigo-400 mt-2">
+              <Loader size={12} className="animate-spin" /> Extracting data…
             </div>
           )}
         </label>
 
+        {/* Manual entry */}
         <button
-          className="card p-6 flex flex-col gap-3 border-2 border-transparent hover:border-emerald-500/50 cursor-pointer transition-all text-left group"
+          className="card p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 cursor-pointer transition-all text-left group flex flex-col"
           onClick={() => setStep(1)}
         >
-          <div className="bg-emerald-500/15 p-3 rounded-xl w-fit text-emerald-400 group-hover:bg-emerald-500/25 transition-colors">
-            <PenLine size={24} />
+          <div className="text-3xl bg-gray-800 p-3 rounded-xl group-hover:bg-gray-700 transition-colors w-fit mb-4">
+            ✏️
           </div>
-          <div>
-            <div className="font-bold text-gray-100 text-sm">Enter Manually</div>
-            <div className="text-xs text-gray-400 mt-1 leading-relaxed">Fill in your income, deductions, and TDS details step by step.</div>
-          </div>
+          <span className="font-bold text-gray-100 mb-2">Enter Details Yourself</span>
+          <p className="text-sm text-gray-400 leading-relaxed flex-1">
+            Prefer to fill in your numbers? I'll guide you section by section.
+          </p>
+          <p className="text-xs text-gray-500 mt-3">Best for complex cases</p>
         </button>
+
       </div>
+
+      <p className="flex items-center justify-center gap-2 text-xs text-gray-500 pt-1">
+        🔒 Your data is encrypted and never shared. Stored only on this device.
+      </p>
     </div>
   );
 
-  // ── STEP 1: income ───────────────────────────────────────────────────────────
+  // STEP 1: income
   if (step === 1) return (
-    <div className="animate-fade-in flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="animate-fade-in flex flex-col gap-4">
       <StepBar step={step} />
       {uploadMsg && (
         <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-sm text-emerald-300">
@@ -346,7 +372,6 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
         </div>
       )}
 
-      {/* Personal */}
       <Section title="Personal Details">
         <div className="field-row">
           <label className="form-label">PAN</label>
@@ -369,30 +394,27 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
         </div>
       </Section>
 
-      {/* Salary */}
       <Section title="Salary Income">
-        <Field label="Basic Salary"   value={form.income.salary.basic}   onChange={v => setIncome(['salary','basic'],   v)} />
-        <Field label="HRA Received"   value={form.income.salary.hra}     onChange={v => setIncome(['salary','hra'],     v)} />
-        <Field label="LTA"            value={form.income.salary.lta}     onChange={v => setIncome(['salary','lta'],     v)} />
+        <Field label="Basic Salary"      value={form.income.salary.basic}   onChange={v => setIncome(['salary','basic'],   v)} />
+        <Field label="HRA Received"      value={form.income.salary.hra}     onChange={v => setIncome(['salary','hra'],     v)} />
+        <Field label="LTA"               value={form.income.salary.lta}     onChange={v => setIncome(['salary','lta'],     v)} />
         <Field label="Special Allowance" value={form.income.salary.special} onChange={v => setIncome(['salary','special'], v)} />
       </Section>
 
-      {/* Other income */}
       <Section title="Other Income" defaultOpen={false}>
-        <Field label="Savings / FD Interest"  value={form.income.other_sources.interest}       onChange={v => setIncome(['other_sources','interest'],       v)} />
-        <Field label="Dividend Income"         value={form.income.other_sources.dividend}       onChange={v => setIncome(['other_sources','dividend'],       v)} />
-        <Field label="Family Pension"          value={form.income.other_sources.family_pension} onChange={v => setIncome(['other_sources','family_pension'], v)} />
-        <Field label="STCG u/s 111A"          value={form.income.capital_gains.stcg_111a}      onChange={v => setIncome(['capital_gains','stcg_111a'],      v)} />
-        <Field label="LTCG u/s 112A"          value={form.income.capital_gains.ltcg_112a}      onChange={v => setIncome(['capital_gains','ltcg_112a'],      v)} />
+        <Field label="Savings / FD Interest"          value={form.income.other_sources.interest}       onChange={v => setIncome(['other_sources','interest'],       v)} />
+        <Field label="Dividend Income"                value={form.income.other_sources.dividend}       onChange={v => setIncome(['other_sources','dividend'],       v)} />
+        <Field label="Family Pension"                 value={form.income.other_sources.family_pension} onChange={v => setIncome(['other_sources','family_pension'], v)} />
+        <Field label="STCG u/s 111A"                 value={form.income.capital_gains.stcg_111a}      onChange={v => setIncome(['capital_gains','stcg_111a'],      v)} />
+        <Field label="LTCG u/s 112A"                 value={form.income.capital_gains.ltcg_112a}      onChange={v => setIncome(['capital_gains','ltcg_112a'],      v)} />
         <Field label="Business / Profession Turnover" value={form.income.business_profession.turnover} onChange={v => setIncome(['business_profession','turnover'], v)} />
       </Section>
 
-      {/* House property */}
       <Section title="House Property Income (Old Regime)" defaultOpen={false}>
-        <Field label="Annual Rental Income"  value={form.income.house_property.rental}        onChange={v => setIncome(['house_property','rental'],        v)} />
-        <Field label="Municipal Taxes Paid"  value={form.income.house_property.municipal_taxes} onChange={v => setIncome(['house_property','municipal_taxes'], v)} />
-        <Field label="Home Loan Interest Paid" value={form.income.house_property.interest_paid} onChange={v => setIncome(['house_property','interest_paid'], v)} />
-        <Field label="Rent Paid by You (for HRA)" value={form.income.house_property.rental_paid} onChange={v => setIncome(['house_property','rental_paid'], v)} />
+        <Field label="Annual Rental Income"        value={form.income.house_property.rental}          onChange={v => setIncome(['house_property','rental'],          v)} />
+        <Field label="Municipal Taxes Paid"        value={form.income.house_property.municipal_taxes} onChange={v => setIncome(['house_property','municipal_taxes'], v)} />
+        <Field label="Home Loan Interest Paid"     value={form.income.house_property.interest_paid}   onChange={v => setIncome(['house_property','interest_paid'],   v)} />
+        <Field label="Rent Paid by You (for HRA)"  value={form.income.house_property.rental_paid}     onChange={v => setIncome(['house_property','rental_paid'],     v)} />
       </Section>
 
       <div className="flex justify-between pt-2">
@@ -402,26 +424,26 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     </div>
   );
 
-  // ── STEP 2: deductions ───────────────────────────────────────────────────────
+  // STEP 2: deductions
   if (step === 2) return (
-    <div className="animate-fade-in flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="animate-fade-in flex flex-col gap-4">
       <StepBar step={step} />
       <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 flex items-start gap-2 text-xs text-indigo-300">
         <AlertCircle size={14} className="shrink-0 mt-0.5" />
         Deductions below apply only under the <strong className="text-indigo-200">Old Tax Regime</strong>. The engine computes both regimes and recommends the optimal one.
       </div>
 
-      <Section title="Section 80C — Investments (Cap ₹1,50,000)">
-        <Field label="EPF (Employer's PF)"     value={form.deductions['80C'].breakdown.epf}    onChange={v => setDed80C('epf',    v)} />
-        <Field label="PPF Contribution"        value={form.deductions['80C'].breakdown.ppf}    onChange={v => setDed80C('ppf',    v)} />
-        <Field label="ELSS Mutual Funds"       value={form.deductions['80C'].breakdown.elss}   onChange={v => setDed80C('elss',   v)} />
-        <Field label="LIC Premium"             value={form.deductions['80C'].breakdown.lic}    onChange={v => setDed80C('lic',    v)} />
+      <Section title="Section 80C – Investments (Cap ₹1,50,000)">
+        <Field label="EPF (Employer's PF)"     value={form.deductions['80C'].breakdown.epf}     onChange={v => setDed80C('epf',    v)} />
+        <Field label="PPF Contribution"        value={form.deductions['80C'].breakdown.ppf}     onChange={v => setDed80C('ppf',    v)} />
+        <Field label="ELSS Mutual Funds"       value={form.deductions['80C'].breakdown.elss}    onChange={v => setDed80C('elss',   v)} />
+        <Field label="LIC Premium"             value={form.deductions['80C'].breakdown.lic}     onChange={v => setDed80C('lic',    v)} />
         <Field label="Children's Tuition Fees" value={form.deductions['80C'].breakdown.tuition} onChange={v => setDed80C('tuition', v)} />
       </Section>
 
-      <Section title="Section 80D — Health Insurance">
-        <Field label="Self & Family Premium"   value={form.deductions['80D'].self_family} onChange={v => setDed80D('self_family', v)} />
-        <Field label="Parents Premium"         value={form.deductions['80D'].parents}     onChange={v => setDed80D('parents',     v)} />
+      <Section title="Section 80D – Health Insurance">
+        <Field label="Self & Family Premium" value={form.deductions['80D'].self_family} onChange={v => setDed80D('self_family', v)} />
+        <Field label="Parents Premium"       value={form.deductions['80D'].parents}     onChange={v => setDed80D('parents',     v)} />
         <div className="field-row sm:col-span-2 lg:col-span-3">
           <label className="form-label">Senior Citizen Flags</label>
           <div className="flex flex-wrap gap-4">
@@ -438,13 +460,13 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       </Section>
 
       <Section title="Other Deductions" defaultOpen={false}>
-        <Field label="NPS 80CCD(1B) (Cap ₹50k)"   value={form.deductions['80CCD_1B']} onChange={v => setDed('80CCD_1B', v)} />
-        <Field label="Education Loan Interest 80E"  value={form.deductions['80E']}      onChange={v => setDed('80E', v)} />
-        <Field label="First Home Loan 80EEA (Cap ₹1.5L)" value={form.deductions['80EEA'].interest} onChange={v => setDed('80EEA', { ...form.deductions['80EEA'], interest: v })} />
-        <Field label="Donations 80G (100% eligible)" value={form.deductions['80G'].eligible_100} onChange={v => setDed80G('eligible_100', v)} />
-        <Field label="Donations 80G (50% eligible)"  value={form.deductions['80G'].eligible_50}  onChange={v => setDed80G('eligible_50',  v)} />
-        <Field label="Savings Interest 80TTA (Cap ₹10k)" value={form.deductions['80TTA']} onChange={v => setDed('80TTA', v)} />
-        <Field label="Senior Deposit Interest 80TTB (Cap ₹50k)" value={form.deductions['80TTB']} onChange={v => setDed('80TTB', v)} />
+        <Field label="NPS 80CCD(1B) (Cap ₹50k)"           value={form.deductions['80CCD_1B']}          onChange={v => setDed('80CCD_1B', v)} />
+        <Field label="Education Loan Interest 80E"         value={form.deductions['80E']}               onChange={v => setDed('80E', v)} />
+        <Field label="First Home Loan 80EEA (Cap ₹1.5L)"  value={form.deductions['80EEA'].interest}    onChange={v => setDed('80EEA', { ...form.deductions['80EEA'], interest: v })} />
+        <Field label="Donations 80G (100% eligible)"       value={form.deductions['80G'].eligible_100}  onChange={v => setDed80G('eligible_100', v)} />
+        <Field label="Donations 80G (50% eligible)"        value={form.deductions['80G'].eligible_50}   onChange={v => setDed80G('eligible_50',  v)} />
+        <Field label="Savings Interest 80TTA (Cap ₹10k)"  value={form.deductions['80TTA']}             onChange={v => setDed('80TTA', v)} />
+        <Field label="Senior Deposit Interest 80TTB (Cap ₹50k)" value={form.deductions['80TTB']}       onChange={v => setDed('80TTB', v)} />
       </Section>
 
       <div className="flex justify-between pt-2">
@@ -454,14 +476,14 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     </div>
   );
 
-  // ── STEP 3: tax paid ─────────────────────────────────────────────────────────
+  // STEP 3: tax paid
   if (step === 3) return (
-    <div className="animate-fade-in flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="animate-fade-in flex flex-col gap-4">
       <StepBar step={step} />
 
       <Section title="Tax Deducted at Source & Advance Tax">
-        <Field label="TDS — Salary (from Form 16)" value={form.tax_paid.tds_salary}  onChange={v => setTaxPaid('tds_salary',  v)} />
-        <Field label="TDS — Other Sources"          value={form.tax_paid.tds_other}   onChange={v => setTaxPaid('tds_other',   v)} />
+        <Field label="TDS – Salary (from Form 16)" value={form.tax_paid.tds_salary}  onChange={v => setTaxPaid('tds_salary',  v)} />
+        <Field label="TDS – Other Sources"          value={form.tax_paid.tds_other}   onChange={v => setTaxPaid('tds_other',   v)} />
         <Field label="Advance Tax Paid"             value={form.tax_paid.advance_tax} onChange={v => setTaxPaid('advance_tax', v)} />
       </Section>
 
@@ -474,7 +496,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     </div>
   );
 
-  // ── STEP 4: results ──────────────────────────────────────────────────────────
+  // STEP 4: results
   if (step === 4 && result && suggestion) {
     const isNew    = result.summary.optimal_regime === 'new';
     const optTax   = isNew ? result.new_regime.total_tax : result.old_regime.total_tax;
@@ -482,11 +504,15 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     const totalPaid = tp.tds_salary + tp.tds_other + tp.advance_tax;
     const netDiff  = totalPaid - optTax;
 
-    const accentMap = { emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500', text: 'text-emerald-400' }, indigo: { bg: 'bg-indigo-500/10', border: 'border-indigo-500', text: 'text-indigo-400' }, amber: { bg: 'bg-amber-500/10', border: 'border-amber-500', text: 'text-amber-400' } };
+    const accentMap = {
+      emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500', text: 'text-emerald-400' },
+      indigo:  { bg: 'bg-indigo-500/10',  border: 'border-indigo-500',  text: 'text-indigo-400' },
+      amber:   { bg: 'bg-amber-500/10',   border: 'border-amber-500',   text: 'text-amber-400' },
+    };
     const ac = accentMap[suggestion.accent];
 
     return (
-      <div className="animate-fade-in flex flex-col gap-5 max-w-4xl mx-auto">
+      <div className="animate-fade-in flex flex-col gap-5">
         <StepBar step={step} />
 
         {/* ITR form suggestion */}
@@ -510,8 +536,8 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
           </div>
         </div>
 
-        {/* Regime & tax */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Regime & tax cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className={`card p-5 border-l-4 ${isNew ? 'border-emerald-500 bg-emerald-500/5' : 'border-indigo-500 bg-indigo-500/5'}`}>
             <div className="form-label">Optimal Regime</div>
             <div className={`text-xl font-extrabold ${isNew ? 'text-emerald-400' : 'text-indigo-400'}`}>
@@ -523,7 +549,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
             <div className="form-label">Net Tax Liability</div>
             <div className="text-xl font-extrabold text-gray-100">₹{fmt(optTax)}</div>
             <div className="text-xs text-gray-400 mt-1">
-              New Regime: ₹{fmt(result.new_regime.total_tax)} · Old Regime: ₹{fmt(result.old_regime.total_tax)}
+              New: ₹{fmt(result.new_regime.total_tax)} · Old: ₹{fmt(result.old_regime.total_tax)}
             </div>
           </div>
           <div className={`card p-5 border-l-4 ${netDiff >= 0 ? 'border-emerald-500' : 'border-red-500'}`}>

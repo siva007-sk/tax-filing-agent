@@ -2,47 +2,80 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Palette: #EEEEEE · #6FCF97 · #2FA084 · #1F6F5F ── */
+  /* Gray → Deep Navy (bg-primary: #0F172A) */
+  --color-gray-950: #0B1221;
+  --color-gray-900: #0F172A;
+  --color-gray-800: #1E293B;
+  --color-gray-700: #334155;
+  --color-gray-600: #475569;
+  --color-gray-500: #64748B;
+  --color-gray-400: #94A3B8;
+  --color-gray-300: #CBD5E1;
+  --color-gray-200: #E2E8F0;
+  --color-gray-100: #F1F5F9;
+  --color-gray-50:  #F8FAFC;
 
-  /* indigo → teal scale (primary actions, active tabs, borders, rings) */
-  --color-indigo-50:  #f0faf7;
-  --color-indigo-100: #d6f2ea;
-  --color-indigo-200: #aee5d5;
-  --color-indigo-300: #7dd1bc;
-  --color-indigo-400: #6ECFB0;
-  --color-indigo-500: #2FA084;
-  --color-indigo-600: #2FA084;
-  --color-indigo-700: #1F6F5F;
-  --color-indigo-800: #185A4D;
-  --color-indigo-900: #0F3D34;
-  --color-indigo-950: #091F1A;
+  /* Indigo → Sage Green (primary action: #2D6A4F) */
+  --color-indigo-950: #0A1F16;
+  --color-indigo-900: #0F2D1F;
+  --color-indigo-800: #1A4030;
+  --color-indigo-700: #215238;
+  --color-indigo-600: #2D6A4F;
+  --color-indigo-500: #3D8B65;
+  --color-indigo-400: #52A87A;
+  --color-indigo-300: #74C498;
+  --color-indigo-200: #A3DDB8;
+  --color-indigo-100: #D1F0DE;
+  --color-indigo-50:  #EDFAF4;
 
-  /* emerald → mint-green scale (optimal regime, refund, success states) */
-  --color-emerald-50:  #f2fbf5;
-  --color-emerald-100: #dcf5e6;
-  --color-emerald-200: #b8eacc;
-  --color-emerald-300: #88d9a8;
-  --color-emerald-400: #6FCF97;
-  --color-emerald-500: #6FCF97;
-  --color-emerald-600: #2FA084;
-  --color-emerald-700: #1F6F5F;
-  --color-emerald-800: #185A4D;
-  --color-emerald-900: #0F3D34;
-  --color-emerald-950: #091F1A;
+  /* Emerald → Bright green (success / refund / optimal) */
+  --color-emerald-600: #16A34A;
+  --color-emerald-500: #22C55E;
+  --color-emerald-400: #4ADE80;
+  --color-emerald-300: #86EFAC;
+  --color-emerald-200: #BBF7D0;
+  --color-emerald-100: #DCFCE7;
+  --color-emerald-50:  #F0FDF4;
+  --color-emerald-900: #14532D;
+  --color-emerald-800: #166534;
+  --color-emerald-700: #15803D;
 
-  /* gray-100 override (#EEEEEE from palette) */
-  --color-gray-100: #EEEEEE;
+  /* Amber → Gold (savings, celebrations: #D4A373) */
+  --color-amber-950: #3D2E14;
+  --color-amber-900: #4A3618;
+  --color-amber-800: #6B4F22;
+  --color-amber-700: #8A6526;
+  --color-amber-600: #B8893A;
+  --color-amber-500: #D4A373;
+  --color-amber-400: #DFBA8A;
+  --color-amber-300: #ECCFAB;
+  --color-amber-200: #F4E3CC;
+  --color-amber-100: #FAF0E4;
+  --color-amber-50:  #FDFAF5;
+
+  /* Red → Terracotta (warnings, deadlines, errors: #E07A5F) */
+  --color-red-950: #3D1A14;
+  --color-red-900: #4A2018;
+  --color-red-800: #6B3028;
+  --color-red-700: #8A4438;
+  --color-red-600: #B85C4A;
+  --color-red-500: #E07A5F;
+  --color-red-400: #E89880;
+  --color-red-300: #F0B8A3;
+  --color-red-200: #F7D7CC;
+  --color-red-100: #FBF0EC;
+  --color-red-50:  #FEF8F6;
 }
 
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: #374151 transparent;
+    scrollbar-color: #334155 transparent;
   }
-  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
-  *::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  *::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  *::-webkit-scrollbar-thumb:hover { background: #475569; }
 
   body {
     font-family: 'Outfit', system-ui, sans-serif;
@@ -64,39 +97,41 @@
   }
 
   input[type=range] {
-    @apply accent-indigo-500 cursor-pointer w-full;
+    @apply cursor-pointer w-full;
+    accent-color: #2D6A4F;
+    height: 6px;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl;
+    @apply bg-gray-900 border border-gray-800 rounded-2xl;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
     border: none;
     font-family: inherit;
   }
 
   .btn-success {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
     border: none;
     font-family: inherit;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-200 text-sm font-semibold rounded-lg border border-gray-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-200 text-sm font-semibold rounded-xl border border-gray-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
     font-family: inherit;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-950 hover:bg-red-900 text-red-400 text-sm font-semibold rounded-lg border border-red-900 transition-colors cursor-pointer;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-950 hover:bg-red-900 text-red-400 text-sm font-semibold rounded-xl border border-red-900 transition-colors cursor-pointer;
     font-family: inherit;
   }
 
   .tab-btn {
-    @apply flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors cursor-pointer whitespace-nowrap;
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors cursor-pointer whitespace-nowrap;
     border: none;
     background: transparent;
     font-family: inherit;
@@ -115,13 +150,62 @@
   }
 }
 
+/* ── Light mode overrides (inverts the gray scale) ── */
+[data-theme="light"] {
+  --color-gray-950: #F8FAFC;
+  --color-gray-900: #FFFFFF;
+  --color-gray-800: #F1F5F9;
+  --color-gray-700: #E2E8F0;
+  --color-gray-600: #CBD5E1;
+  --color-gray-500: #94A3B8;
+  --color-gray-400: #64748B;
+  --color-gray-300: #475569;
+  --color-gray-200: #334155;
+  --color-gray-100: #1E293B;
+  --color-gray-50:  #0F172A;
+
+  /* Terracotta stays readable on light */
+  --color-red-500:  #C8503A;
+  --color-red-400:  #D96B54;
+  --color-red-300:  #E08070;
+  --color-red-900:  #FEF0EE;
+  --color-red-950:  #FDDCD8;
+
+  /* Gold stays readable on light */
+  --color-amber-500: #B8893A;
+  --color-amber-400: #9A7030;
+  --color-amber-300: #7A5420;
+  --color-amber-100: #FDF3E4;
+  --color-amber-950: #FBE8CC;
+
+  /* Sage green adjusted for light bg */
+  --color-indigo-600: #1F5A40;
+  --color-indigo-500: #2D6A4F;
+  --color-indigo-400: #3D8B65;
+  --color-indigo-900: #E8F5EE;
+  --color-indigo-950: #D4EDE0;
+
+  /* Emerald on light */
+  --color-emerald-400: #16A34A;
+  --color-emerald-500: #15803D;
+}
+
 @layer utilities {
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes bounce-dot {
+    0%, 80%, 100% { transform: translateY(0); }
+    40%           { transform: translateY(-6px); }
   }
 
   .animate-fade-in {
     animation: fadeIn 0.25s ease forwards;
+  }
+
+  .animate-bounce-dot {
+    animation: bounce-dot 1.2s infinite ease-in-out;
   }
 }

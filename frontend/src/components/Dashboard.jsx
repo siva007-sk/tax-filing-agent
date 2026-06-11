@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
 import {
-  TrendingUp, Percent, Coins, ArrowRight, Clock, CheckCircle,
-  ShieldAlert, FileText, BadgeCheck, AlertTriangle, ChevronRight,
-  Wifi, RefreshCw, ExternalLink, Loader, Brain, Zap, CheckCircle2,
+  Clock, ChevronRight, ExternalLink, RefreshCw, Loader,
+  Shield, CheckCircle, FileText, BadgeCheck,
 } from 'lucide-react';
 
 const fmt = n => (n || 0).toLocaleString('en-IN');
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getDeadlineInfo() {
+  const deadline = new Date('2026-07-31T23:59:59');
+  const today    = new Date();
+  const days     = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+  return { days: Math.max(0, days), label: '31 July 2026' };
+}
 
 const STATUS_STYLE = {
   'E-Verified': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: BadgeCheck },
@@ -14,27 +27,14 @@ const STATUS_STYLE = {
   default:      { bg: 'bg-gray-800',        text: 'text-gray-400',    border: 'border-gray-700',        icon: Clock },
 };
 
-function timeAgo(iso) {
-  if (!iso) return 'never';
-  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (diff < 60)   return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
-function LiveUpdates() {
-  const [state, setState] = useState(null);
-  const [localRunning, setLocalRunning] = useState(false);
+function TaxUpdatesCard() {
+  const [state, setState]           = useState(null);
+  const [localRunning, setLR]       = useState(false);
 
   const load = () =>
     fetch('/api/v1/corpus/status')
       .then(r => r.json())
-      .then(data => {
-        setState(data);
-        // Clear local flag once server confirms completion
-        if (data.status !== 'running') setLocalRunning(false);
-      })
+      .then(data => { setState(data); if (data.status !== 'running') setLR(false); })
       .catch(() => {});
 
   useEffect(() => {
@@ -44,182 +44,70 @@ function LiveUpdates() {
   }, []);
 
   const triggerRefresh = async () => {
-    setLocalRunning(true);
-    // Optimistically reflect running state before the next poll returns
+    setLR(true);
     setState(s => ({ ...s, status: 'running' }));
     await fetch('/api/v1/corpus/refresh', { method: 'POST' }).catch(() => {});
   };
 
   const isRunning = state?.status === 'running' || localRunning;
-  const updates   = state?.recent_updates || [];
+  const updates   = (state?.recent_updates || []).slice(0, 2);
 
   return (
-    <div className="card p-6">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
-          <Wifi size={16} className="text-indigo-400" />
-          Live Tax Law Intelligence
-        </h3>
-        <div className="flex items-center gap-3">
-          {state?.last_updated && (
-            <span className="text-xs text-gray-500">
-              Updated {timeAgo(state.last_updated)}
-              {state.update_count > 0 && ` · ${state.update_count} results`}
-            </span>
-          )}
-          <button
-            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
-            onClick={triggerRefresh}
-            disabled={isRunning}
-          >
-            {isRunning
-              ? <><Loader size={12} className="animate-spin" /> Searching…</>
-              : <><RefreshCw size={12} /> Refresh Now</>}
-          </button>
-        </div>
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+          What's New in Tax Law
+        </span>
+        <button
+          onClick={triggerRefresh}
+          disabled={isRunning}
+          className="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg cursor-pointer border-0 bg-transparent disabled:opacity-50"
+          title="Refresh tax law data"
+        >
+          {isRunning
+            ? <Loader size={13} className="animate-spin text-indigo-400" />
+            : <RefreshCw size={13} />}
+        </button>
       </div>
 
       {isRunning && (
-        <div className="flex items-center gap-3 py-4 text-sm text-gray-400">
-          <Loader size={16} className="animate-spin text-indigo-400" />
-          Searching CBDT circulars, budget updates, and tax law amendments…
-        </div>
+        <p className="text-xs text-gray-500 flex items-center gap-2 py-2">
+          <Loader size={11} className="animate-spin text-indigo-400" />
+          Searching CBDT circulars &amp; budget updates…
+        </p>
       )}
 
       {!isRunning && updates.length === 0 && (
-        <div className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-xs text-gray-500 py-2 text-center">
           {state?.status === 'never_run'
-            ? 'No updates yet — hit Refresh Now to search for the latest tax law changes.'
-            : 'No relevant tax updates found. Try refreshing.'}
-        </div>
+            ? 'Hit refresh to fetch the latest tax law changes.'
+            : 'No updates found. Try refreshing.'}
+        </p>
       )}
 
       {!isRunning && updates.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {updates.slice(0, 6).map((u, i) => (
-            <div key={i} className="flex gap-3 bg-gray-800/40 border border-gray-700/60 rounded-xl p-3 hover:border-indigo-500/30 transition-colors">
+        <div className="flex flex-col gap-4">
+          {updates.map((u, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-gray-200 leading-snug line-clamp-1">{u.title}</p>
-                  {u.url && (
-                    <a href={u.url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-gray-500 hover:text-indigo-400 transition-colors">
-                      <ExternalLink size={13} />
-                    </a>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed line-clamp-2">{u.snippet}</p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                  <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-medium">{u.source}</span>
-                  <span>{timeAgo(u.fetched_at)}</span>
-                  <span>{'●'.repeat(Math.min(u.relevance || 0, 5))} relevance</span>
-                </div>
+                <p className="text-sm text-gray-200 leading-snug line-clamp-2">{u.title}</p>
+                {u.snippet && (
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-1">{u.snippet}</p>
+                )}
+                {u.url && (
+                  <a
+                    href={u.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1 w-fit"
+                  >
+                    Read more <ExternalLink size={10} />
+                  </a>
+                )}
               </div>
             </div>
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const CHANGE_TYPE_LABEL = {
-  standard_deduction: 'Std. Deduction',
-  deduction_limit:    'Deduction Limit',
-  rebate_87a:         '87A Rebate',
-  cess_rate:          'Cess Rate',
-  new_section:        'New Section',
-  slab_rate:          'Slab Rate',
-};
-
-const CHANGE_TYPE_COLOR = {
-  standard_deduction: 'text-indigo-400 bg-indigo-500/10',
-  deduction_limit:    'text-emerald-400 bg-emerald-500/10',
-  rebate_87a:         'text-amber-400 bg-amber-500/10',
-  cess_rate:          'text-red-400 bg-red-500/10',
-  new_section:        'text-cyan-400 bg-cyan-500/10',
-  slab_rate:          'text-purple-400 bg-purple-500/10',
-};
-
-function RegulationChanges() {
-  const [summary, setSummary] = useState(null);
-
-  const load = () =>
-    fetch('/api/v1/regulation-changes/summary')
-      .then(r => r.json())
-      .then(setSummary)
-      .catch(() => {});
-
-  useEffect(() => { load(); }, []);
-
-  if (!summary) return null;
-
-  return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h3 className="text-base font-bold text-gray-100 flex items-center gap-2">
-          <Brain size={16} className="text-purple-400" />
-          AI Regulation Intelligence
-        </h3>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <Zap size={11} className="text-amber-400" />
-            {summary.total} changes detected
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 size={11} className="text-emerald-400" />
-            {summary.applied} applied
-          </span>
-          {summary.pending > 0 && (
-            <span className="text-amber-400">{summary.pending} pending</span>
-          )}
-        </div>
-      </div>
-
-      {summary.total === 0 ? (
-        <div className="text-center py-6 text-gray-500 text-sm">
-          <Brain size={28} className="mx-auto mb-2 text-gray-700" />
-          No regulation changes detected yet.{' '}
-          <span className="text-gray-400">Refresh tax law data to trigger LLM analysis.</span>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {(summary.recent || []).map((c, i) => {
-            const typeLabel = CHANGE_TYPE_LABEL[c.change_type] || c.change_type;
-            const typeColor = CHANGE_TYPE_COLOR[c.change_type] || 'text-gray-400 bg-gray-800';
-            return (
-              <div
-                key={i}
-                className="flex items-start gap-3 bg-gray-800/40 border border-gray-700/60 rounded-xl p-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${typeColor}`}>
-                      {typeLabel}
-                    </span>
-                    {c.regime && (
-                      <span className="text-xs text-gray-500 capitalize">{c.regime} regime</span>
-                    )}
-                    {c.section && (
-                      <span className="text-xs text-indigo-400">§{c.section}</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-300 mt-1.5 leading-snug">{c.description}</p>
-                  {c.new_value !== undefined && c.old_value !== undefined && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      ₹{(c.old_value || 0).toLocaleString('en-IN')}
-                      {' → '}
-                      <strong className="text-emerald-400">₹{(c.new_value || 0).toLocaleString('en-IN')}</strong>
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0 mt-0.5">
-                  {c.applied
-                    ? <CheckCircle2 size={14} className="text-emerald-400" title="Applied to calculations" />
-                    : <Clock size={14} className="text-amber-400" title="Pending application" />}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
     </div>
@@ -231,273 +119,250 @@ export default function Dashboard({ profile, taxData, setTab }) {
   const optimalTax   = isOptimalNew ? taxData.new_regime.total_tax : taxData.old_regime.total_tax;
   const taxSaved     = taxData.summary.tax_saved;
 
-  const sal         = profile.income.salary;
-  const grossSalary = (sal.basic || 0) + (sal.hra || 0) + (sal.lta || 0) + (sal.special || 0);
-  const totalGross  =
-    grossSalary +
-    (profile.income.house_property.rental        || 0) +
-    (profile.income.capital_gains.stcg_111a      || 0) +
-    (profile.income.capital_gains.ltcg_112a      || 0) +
-    (profile.income.business_profession.turnover || 0) +
-    (profile.income.other_sources.interest       || 0) +
-    (profile.income.other_sources.dividend       || 0) +
-    (profile.income.other_sources.family_pension || 0);
-
   const tp       = profile.tax_paid;
   const totalTDS = (tp.tds_salary || 0) + (tp.tds_other || 0) + (tp.advance_tax || 0);
   const netDiff  = totalTDS - optimalTax;
 
   const pastFilings = profile.past_filings || [];
-  const totalSavedAllYears = pastFilings.reduce((s, f) => s + (f.tax_saved || 0), 0);
-  const totalPaidAllYears  = pastFilings.reduce((s, f) => s + (f.tax_paid  || 0), 0);
 
-  const accentColor = isOptimalNew ? 'border-emerald-500' : 'border-indigo-500';
-  const accentText  = isOptimalNew ? 'text-emerald-400'   : 'text-indigo-400';
-  const accentBg    = isOptimalNew ? 'bg-emerald-500/10'  : 'bg-indigo-500/10';
+  const { days, label: deadlineLabel } = getDeadlineInfo();
+  const isUrgent = days <= 30;
+  const greeting = getGreeting();
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6">
+    <div className="animate-fade-in">
 
-      {/* ── Current year banner ─────────────────────────────────────────────── */}
-      <div className={`card p-6 border-l-4 ${accentColor} ${accentBg} flex justify-between items-center flex-wrap gap-4`}>
+      {/* ── Greeting & Deadline pill (full width) ────────────────────────── */}
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
         <div>
-          <span className={`text-xs font-bold uppercase tracking-widest ${accentText}`}>
-            AY 2026-27 · Optimal Regime
-          </span>
-          <h2 className="text-2xl font-extrabold text-gray-100 mt-1">
-            Choose the {isOptimalNew ? 'New Tax Regime' : 'Old Tax Regime'}
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Save <strong className="text-gray-100">₹{fmt(taxSaved)}</strong> over the alternative regime.
-          </p>
+          <h2 className="text-xl font-bold text-gray-100">{greeting} 👋</h2>
+          <p className="text-sm text-gray-400 mt-0.5">Here's your tax snapshot for AY 2026-27.</p>
         </div>
-        <div className="flex gap-3">
-          <div className="text-right">
-            <div className="text-xs text-gray-500 mb-1">Net Tax Liability</div>
-            <div className={`text-3xl font-extrabold ${accentText}`}>₹{fmt(optimalTax)}</div>
-          </div>
-          <button
-            className="btn-primary self-center text-xs px-3 py-2"
-            onClick={() => setTab('filing')}
-          >
-            Start Filing <ChevronRight size={13} />
-          </button>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border shrink-0 ${
+          isUrgent
+            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+            : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+        }`}>
+          <Clock size={12} />
+          {deadlineLabel} · {days} days
         </div>
       </div>
 
-      {/* ── Current year metrics ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {[
-          { icon: <Coins size={22} />,      color: 'text-indigo-400', bg: 'bg-indigo-500/15',  label: 'Gross Total Income',   value: `₹${fmt(totalGross)}` },
-          { icon: <TrendingUp size={22} />, color: 'text-emerald-400', bg: 'bg-emerald-500/15', label: 'TDS & Tax Paid',       value: `₹${fmt(totalTDS)}` },
-          { icon: <Percent size={22} />,    color: 'text-amber-400',  bg: 'bg-amber-500/15',   label: 'Effective Tax Rate',   value: `${totalGross > 0 ? ((optimalTax / totalGross) * 100).toFixed(2) : 0}%` },
-        ].map(({ icon, color, bg, label, value }) => (
-          <div key={label} className="card p-5 flex items-center gap-4">
-            <div className={`${bg} ${color} p-3 rounded-xl shrink-0`}>{icon}</div>
-            <div>
-              <div className="form-label">{label}</div>
-              <div className="text-xl font-bold text-gray-100">{value}</div>
+      {/* ── 2-column grid on desktop ──────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        {/* ── LEFT column ── */}
+        <div className="flex flex-col gap-5">
+
+          {/* Tax Snapshot hero card */}
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-5 border border-gray-700/50 shadow-lg">
+            <div className="flex items-center justify-between mb-5">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Your Tax Snapshot
+              </span>
+              <span className="bg-indigo-600/20 text-indigo-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                AY 2026-27
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Regime</span>
+                <span className="text-gray-100 font-semibold text-sm">
+                  {isOptimalNew ? 'New (Optimal)' : 'Old (Optimal)'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Est. Tax Liability</span>
+                <span className="text-gray-100 font-bold text-lg font-mono">₹{fmt(optimalTax)}</span>
+              </div>
+              {totalTDS > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">TDS / Advance Tax Paid</span>
+                  <span className="text-gray-300 font-mono text-sm">₹{fmt(totalTDS)}</span>
+                </div>
+              )}
+              <div className="h-px bg-gray-700 my-0.5" />
+              {totalTDS > 0 ? (
+                <div className="flex justify-between items-center">
+                  {netDiff >= 0 ? (
+                    <>
+                      <span className="text-emerald-400 font-semibold text-sm">Estimated Refund</span>
+                      <span className="text-emerald-400 font-bold font-mono">+₹{fmt(netDiff)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-red-400 font-semibold text-sm">⚠️ Balance Due</span>
+                      <span className="text-red-400 font-bold font-mono">₹{fmt(Math.abs(netDiff))}</span>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">TDS / Advance Tax</span>
+                  <span className="text-gray-500 text-xs">Enter via File Taxes</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0 active:scale-[0.98]"
+                onClick={() => setTab('filing')}
+              >
+                📁 Upload Form 16
+              </button>
+              <button
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0 active:scale-[0.98]"
+                onClick={() => setTab('advisor')}
+              >
+                💬 Ask Mitra
+              </button>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* ── Refund / payable status ──────────────────────────────────────────── */}
-      {totalTDS > 0 && (
-        <div className={`card p-5 flex items-center justify-between gap-4 border-l-4 ${netDiff >= 0 ? 'border-emerald-500' : 'border-red-500'}`}>
-          <div>
-            <div className="form-label">{netDiff >= 0 ? 'Estimated Refund' : 'Tax Payable Before Filing'}</div>
-            <div className={`text-2xl font-extrabold ${netDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              ₹{fmt(Math.abs(netDiff))}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {netDiff >= 0
-                ? 'TDS deducted exceeds liability — file ITR to claim refund.'
-                : 'Pay self-assessment tax u/s 140A via Challan 280 before filing.'}
-            </p>
-          </div>
-          <button className="btn-secondary text-xs shrink-0" onClick={() => setTab('filing')}>
-            File ITR <ArrowRight size={13} />
-          </button>
-        </div>
-      )}
-
-      {/* ── Past ITR filings ─────────────────────────────────────────────────── */}
-      <div className="card p-6">
-        <div className="flex justify-between items-center mb-5">
-          <h3 className="text-base font-bold text-gray-100">Past ITR Filings</h3>
-          {pastFilings.length > 0 && (
-            <div className="flex gap-4 text-xs text-gray-400">
-              <span>
-                Total Paid: <strong className="text-gray-200">₹{fmt(totalPaidAllYears)}</strong>
-              </span>
-              <span>
-                Total Saved: <strong className="text-emerald-400">₹{fmt(totalSavedAllYears)}</strong>
-              </span>
+          {/* Quick Wins (only when savings > 0) */}
+          {taxSaved > 0 && (
+            <div className="card p-5 border border-amber-500/20 bg-amber-500/5">
+              <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-3">
+                🎯 Quick Win
+              </div>
+              <p className="text-gray-200 text-sm leading-relaxed">
+                I checked — you could save{' '}
+                <span className="text-amber-400 font-bold text-base">₹{fmt(taxSaved)}</span>
+                {' '}by switching to the{' '}
+                <strong className="text-gray-100">{isOptimalNew ? 'New' : 'Old'} Regime</strong>.
+              </p>
+              <div className="flex gap-2 mt-4">
+                <button
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0"
+                  onClick={() => setTab('filing')}
+                >
+                  Show me how
+                </button>
+                <button
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-gray-700"
+                  onClick={() => setTab('advisor')}
+                >
+                  Ask Mitra
+                </button>
+              </div>
             </div>
           )}
-        </div>
 
-        {pastFilings.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 text-sm">
-            No past filings recorded. File your first return using the <strong className="text-gray-300">File Taxes</strong> tab.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-500 border-b border-gray-800">
-                  {['Assessment Year', 'Form', 'Regime', 'Gross Income', 'Tax Paid', 'Saved', 'Refund / Payable', 'Status', 'Filed On'].map(h => (
-                    <th key={h} className="text-left py-2 pr-4 font-semibold uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pastFilings.map((f, i) => {
-                  const s = STATUS_STYLE[f.status] || STATUS_STYLE.default;
-                  const SIcon = s.icon;
+          {/* Past Filings compact (if any) */}
+          {pastFilings.length > 0 && (
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Recent Filings
+                </span>
+                <button
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1"
+                  onClick={() => setTab('reports')}
+                >
+                  View all <ChevronRight size={12} />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {pastFilings.slice(0, 3).map((f, i) => {
+                  const s    = STATUS_STYLE[f.status] || STATUS_STYLE.default;
+                  const SIco = s.icon;
                   return (
-                    <tr key={i} className="border-b border-gray-800/60 hover:bg-gray-800/30 transition-colors">
-                      <td className="py-3 pr-4 font-semibold text-gray-100">{f.ay}</td>
-                      <td className="py-3 pr-4">
-                        <span className="bg-indigo-500/10 text-indigo-400 text-xs font-bold px-2 py-0.5 rounded">
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-200">{f.ay}</span>
+                        <span className="text-xs bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-bold">
                           {f.itr_form}
                         </span>
-                      </td>
-                      <td className="py-3 pr-4 text-gray-300 capitalize">{f.regime}</td>
-                      <td className="py-3 pr-4 text-gray-300">₹{fmt(f.gross_income)}</td>
-                      <td className="py-3 pr-4 text-gray-100 font-medium">₹{fmt(f.tax_paid)}</td>
-                      <td className="py-3 pr-4 text-emerald-400 font-semibold">₹{fmt(f.tax_saved)}</td>
-                      <td className="py-3 pr-4">
-                        {f.refund > 0 ? (
-                          <span className="text-emerald-400">+₹{fmt(f.refund)}</span>
-                        ) : f.payable > 0 ? (
-                          <span className="text-red-400">-₹{fmt(f.payable)}</span>
-                        ) : (
-                          <span className="text-gray-500">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-4">
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-300 font-mono">₹{fmt(f.tax_paid)}</span>
                         <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${s.bg} ${s.text} ${s.border}`}>
-                          <SIcon size={11} /> {f.status}
+                          <SIco size={10} /> {f.status}
                         </span>
-                      </td>
-                      <td className="py-3 text-gray-500 text-xs">{f.filed_on}</td>
-                    </tr>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </div>
+            </div>
+          )}
 
-      {/* ── Live tax law intelligence ────────────────────────────────────────── */}
-      <LiveUpdates />
-
-      {/* ── AI regulation change detection ──────────────────────────────────── */}
-      <RegulationChanges />
-
-      {/* ── Regime comparison ────────────────────────────────────────────────── */}
-      <div className="card p-6">
-        <div className="flex justify-between items-center mb-5">
-          <h3 className="text-base font-bold text-gray-100">AY 2026-27 Regime Comparison</h3>
-          <button className="btn-secondary text-xs px-3 py-1.5" onClick={() => setTab('filing')}>
-            Adjust <ArrowRight size={13} />
-          </button>
         </div>
+
+        {/* ── RIGHT column ── */}
         <div className="flex flex-col gap-5">
-          {[
-            {
-              label: 'New Tax Regime (Default)',
-              tax: taxData.new_regime.total_tax,
-              isOpt: isOptimalNew,
-              meta: [
-                `Taxable ₹${fmt(taxData.new_regime.taxable_income)}`,
-                `SD ₹${fmt(taxData.new_regime.standard_deduction)}`,
-                taxData.new_regime.rebate_87a > 0 ? `87A Rebate ₹${fmt(taxData.new_regime.rebate_87a)}` : null,
-              ],
-            },
-            {
-              label: 'Old Tax Regime',
-              tax: taxData.old_regime.total_tax,
-              isOpt: !isOptimalNew,
-              meta: [
-                `Taxable ₹${fmt(taxData.old_regime.taxable_income)}`,
-                `SD ₹${fmt(taxData.old_regime.standard_deduction)}`,
-                `Deductions ₹${fmt(taxData.old_regime.deductions.total)}`,
-              ],
-            },
-          ].map(({ label, tax, isOpt, meta }) => {
-            const maxTax = Math.max(taxData.new_regime.total_tax, taxData.old_regime.total_tax, 1);
-            return (
-              <div key={label}>
-                <div className="flex justify-between text-sm mb-2">
-                  <strong className="text-gray-200">{label}</strong>
-                  <span className={isOpt ? 'text-emerald-400 font-bold' : 'text-gray-400'}>
-                    ₹{fmt(tax)} {isOpt && '✓ Optimal'}
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${isOpt ? 'bg-emerald-500' : 'bg-gray-600'}`}
-                    style={{ width: `${Math.min(100, (tax / maxTax) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-500">
-                  {meta.filter(Boolean).map(m => <span key={m}>{m}</span>)}
-                </div>
+
+          {/* Regime Comparison */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Regime Comparison
+              </span>
+              <button
+                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1"
+                onClick={() => setTab('filing')}
+              >
+                Calculate <ChevronRight size={12} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-4">
+              {[
+                {
+                  label:    'New Regime',
+                  sublabel: 'Lower slabs, standard deduction ₹75k',
+                  tax:      taxData.new_regime.total_tax,
+                  isOpt:    isOptimalNew,
+                },
+                {
+                  label:    'Old Regime',
+                  sublabel: `Deductions: ₹${fmt(taxData.old_regime.deductions.total)}`,
+                  tax:      taxData.old_regime.total_tax,
+                  isOpt:    !isOptimalNew,
+                },
+              ].map(({ label, sublabel, tax, isOpt }) => {
+                const maxTax = Math.max(taxData.new_regime.total_tax, taxData.old_regime.total_tax, 1);
+                return (
+                  <div key={label}>
+                    <div className="flex justify-between items-baseline mb-2">
+                      <div>
+                        <span className="text-sm font-semibold text-gray-200">{label}</span>
+                        <p className="text-xs text-gray-500 mt-0.5">{sublabel}</p>
+                      </div>
+                      <span className={`text-sm font-bold ${isOpt ? 'text-emerald-400' : 'text-gray-400'}`}>
+                        ₹{fmt(tax)} {isOpt && '✓'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${isOpt ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                        style={{ width: `${Math.min(100, (tax / maxTax) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {taxSaved > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between">
+                <span className="text-xs text-gray-400">Savings vs alternative</span>
+                <span className="text-emerald-400 font-bold text-sm">₹{fmt(taxSaved)}</span>
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* What's New in Tax Law */}
+          <TaxUpdatesCard />
+
         </div>
       </div>
 
-      {/* ── Compliance alerts ────────────────────────────────────────────────── */}
-      <div className="card p-6">
-        <h3 className="text-base font-bold text-gray-100 mb-4">Filing Deadlines &amp; Compliance</h3>
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-            <Clock size={17} className="text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-gray-200">Filing Deadline (Non-Audit)</div>
-              <div className="text-xs text-gray-400 mt-1">
-                AY 2026-27 deadline is <strong className="text-gray-100">31 July 2026</strong>. Late filing penalty up to ₹5,000 u/s 234F.
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
-            <CheckCircle size={17} className="text-indigo-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-semibold text-gray-200">E-Verify After Filing</div>
-              <div className="text-xs text-gray-400 mt-1">
-                E-verify within <strong className="text-gray-100">120 days</strong> via Aadhaar OTP, Net Banking, or DSC. Unverified returns are treated as invalid.
-              </div>
-            </div>
-          </div>
-          {totalGross > 5000000 && (
-            <div className="flex gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <ShieldAlert size={17} className="text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-semibold text-red-400">ITR Form Notice</div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Income exceeds ₹50 Lakh — <strong>ITR-2</strong> is required, not ITR-1.
-                </div>
-              </div>
-            </div>
-          )}
-          {netDiff < -5000 && (
-            <div className="flex gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <AlertTriangle size={17} className="text-red-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-semibold text-red-400">Self-Assessment Tax Due</div>
-                <div className="text-xs text-gray-400 mt-1">
-                  ₹{fmt(Math.abs(netDiff))} payable before filing. Use Challan 280 to avoid interest u/s 234B/234C.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* ── Trust footer (full width) ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-xs text-gray-600 justify-center py-4 mt-2">
+        <Shield size={11} className="text-indigo-400" />
+        Your data is encrypted and never shared. Stored only on this device.
       </div>
 
     </div>
