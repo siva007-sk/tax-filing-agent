@@ -3,14 +3,18 @@ import { Download, Trash2, RefreshCw, TrendingUp, Coins, FileText, Receipt } fro
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 const fmt = n => (n || 0).toLocaleString('en-IN');
 
-const STATUS_CLS = {
-  'Generated':  'text-amber-400 bg-amber-500/10 border-amber-500/40',
-  'Filed':      'text-indigo-400 bg-indigo-500/10 border-indigo-500/40',
-  'E-Verified': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/40',
-  'Processed':  'text-emerald-400 bg-emerald-500/10 border-emerald-500/40',
+const STATUS_VARIANT = {
+  'Generated':  'warning',
+  'Filed':      'default',
+  'E-Verified': 'success',
+  'Processed':  'success',
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -52,8 +56,8 @@ export default function Reports({ setTab }) {
 
   const deleteFiling = async (id) => {
     if (!window.confirm('Delete this filing record? This cannot be undone.')) return;
-    await fetch(`/api/v1/reports/filings/${id}`, { method: 'DELETE' });
-    load();
+    const res = await fetch(`/api/v1/reports/filings/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
   };
 
   const chartData = [...(summary?.by_year || [])]
@@ -74,13 +78,12 @@ export default function Reports({ setTab }) {
             <h2 className="text-xl font-bold text-gray-100">Tax Reports</h2>
             <p className="text-sm text-gray-400 mt-0.5">Your filing history and tax journey</p>
           </div>
-          <button className="btn-secondary text-xs flex items-center gap-1.5" onClick={load}>
+          <Button variant="secondary" size="sm" onClick={load}>
             <RefreshCw size={13} /> Refresh
-          </button>
+          </Button>
         </div>
 
-        {/* Welcome card */}
-        <div className="card p-8 text-center">
+        <Card className="p-8 text-center">
           <div className="text-5xl mb-4">🎉</div>
           <h3 className="text-lg font-bold text-gray-100 mb-2">Welcome to your tax dashboard!</h3>
           <p className="text-sm text-gray-400 mb-6 max-w-sm mx-auto leading-relaxed">
@@ -94,20 +97,17 @@ export default function Reports({ setTab }) {
               '📊 Regime comparison history',
               '🔔 Filing deadline reminders',
             ].map(item => (
-              <span key={item} className="text-xs text-gray-400 bg-gray-800 px-3 py-1.5 rounded-full">
+              <Badge key={item} variant="secondary" className="rounded-full px-3 py-1.5">
                 {item}
-              </span>
+              </Badge>
             ))}
           </div>
           {setTab && (
-            <button
-              className="btn-primary mx-auto"
-              onClick={() => setTab('filing')}
-            >
+            <Button className="mx-auto" onClick={() => setTab('filing')}>
               File My First ITR →
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
 
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px bg-gray-800" />
@@ -115,19 +115,16 @@ export default function Reports({ setTab }) {
           <div className="flex-1 h-px bg-gray-800" />
         </div>
 
-        <div className="card p-5 flex items-center gap-4">
+        <Card className="p-5 flex items-center gap-4">
           <span className="text-2xl shrink-0">💡</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium">Filed your taxes elsewhere last year?</p>
             <p className="text-xs text-gray-500 mt-0.5">Import past filings to start tracking your tax journey.</p>
           </div>
-          <button
-            className="btn-secondary text-xs shrink-0"
-            onClick={() => setTab && setTab('filing')}
-          >
+          <Button variant="secondary" size="sm" onClick={() => setTab && setTab('filing')}>
             Import
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
@@ -143,15 +140,17 @@ export default function Reports({ setTab }) {
           <p className="text-sm text-gray-400 mt-0.5">Filing history and multi-year trends</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary text-xs flex items-center gap-1.5" onClick={load}>
+          <Button variant="secondary" size="sm" onClick={load}>
             <RefreshCw size={13} /> Refresh
-          </button>
-          <a
-            href="/api/v1/reports/export"
-            className={`btn-secondary text-xs flex items-center gap-1.5 ${!filings.length ? 'opacity-40 pointer-events-none' : ''}`}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!filings.length}
+            onClick={() => { if (filings.length) window.location.href = '/api/v1/reports/export'; }}
           >
             <Download size={13} /> Export CSV
-          </a>
+          </Button>
         </div>
       </div>
 
@@ -159,25 +158,25 @@ export default function Reports({ setTab }) {
       {summary && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: <FileText  size={20} />, color: 'text-indigo-400',  bg: 'bg-indigo-500/15',  label: 'Total Filings',  value: summary.total_filings },
-            { icon: <Coins     size={20} />, color: 'text-red-400',     bg: 'bg-red-500/15',     label: 'Total Tax Paid', value: `₹${fmt(summary.total_tax_paid)}` },
-            { icon: <TrendingUp size={20}/>, color: 'text-emerald-400', bg: 'bg-emerald-500/15', label: 'Total Saved',    value: `₹${fmt(summary.total_saved)}` },
-            { icon: <Receipt   size={20} />, color: 'text-amber-400',   bg: 'bg-amber-500/15',   label: 'Total Refunds',  value: `₹${fmt(summary.total_refunds)}` },
+            { icon: <FileText   size={20} />, color: 'text-indigo-400',  bg: 'bg-indigo-500/15',  label: 'Total Filings',  value: summary.total_filings },
+            { icon: <Coins      size={20} />, color: 'text-red-400',     bg: 'bg-red-500/15',     label: 'Total Tax Paid', value: `₹${fmt(summary.total_tax_paid)}` },
+            { icon: <TrendingUp size={20} />, color: 'text-emerald-400', bg: 'bg-emerald-500/15', label: 'Total Saved',    value: `₹${fmt(summary.total_saved)}` },
+            { icon: <Receipt    size={20} />, color: 'text-amber-400',   bg: 'bg-amber-500/15',   label: 'Total Refunds',  value: `₹${fmt(summary.total_refunds)}` },
           ].map(({ icon, color, bg, label, value }) => (
-            <div key={label} className="card p-4 flex items-center gap-3">
+            <Card key={label} className="p-4 flex items-center gap-3">
               <div className={`${bg} ${color} p-2.5 rounded-xl shrink-0`}>{icon}</div>
               <div className="min-w-0">
                 <div className="text-xs text-gray-500 truncate">{label}</div>
                 <div className="text-lg font-bold text-gray-100">{value}</div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
       {/* Bar chart */}
       {chartData.length > 0 && (
-        <div className="card p-6">
+        <Card className="p-6">
           <h3 className="text-sm font-bold text-gray-100 mb-4 flex items-center gap-2">
             📈 Savings Trend
             <span className="text-gray-500 font-normal">(₹ thousands)</span>
@@ -193,70 +192,65 @@ export default function Reports({ setTab }) {
               <Bar dataKey="Tax Saved"    fill="#4ADE80" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </Card>
       )}
 
       {/* Filings table */}
-      <div className="card p-6">
+      <Card className="p-6">
         <h3 className="text-sm font-bold text-gray-100 mb-4">Saved Filing Records</h3>
 
         {loading ? (
           <div className="text-center py-10 text-gray-500 text-sm">Loading…</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-500 border-b border-gray-800">
-                  {['AY', 'Form', 'Regime', 'Gross Income', 'Tax Liability', 'Saved', 'Refund / Payable', 'Status', 'Date', ''].map(h => (
-                    <th key={h} className="text-left py-2 pr-4 font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filings.map(f => {
-                  const cls = STATUS_CLS[f.status] || 'text-gray-400 bg-gray-800/60 border-gray-700';
-                  return (
-                    <tr key={f.id} className="border-b border-gray-800/60 hover:bg-gray-800/30 transition-colors">
-                      <td className="py-3 pr-4 font-semibold text-gray-100 whitespace-nowrap">{f.ay}</td>
-                      <td className="py-3 pr-4">
-                        <span className="bg-indigo-500/10 text-indigo-400 text-xs font-bold px-2 py-0.5 rounded">{f.itr_form}</span>
-                      </td>
-                      <td className="py-3 pr-4 text-gray-300 capitalize">{f.regime}</td>
-                      <td className="py-3 pr-4 text-gray-300 whitespace-nowrap">₹{fmt(f.gross_income)}</td>
-                      <td className="py-3 pr-4 text-gray-100 font-medium whitespace-nowrap">₹{fmt(f.tax_paid)}</td>
-                      <td className="py-3 pr-4 text-emerald-400 whitespace-nowrap">₹{fmt(f.tax_saved)}</td>
-                      <td className="py-3 pr-4 whitespace-nowrap">
-                        {f.refund > 0
-                          ? <span className="text-emerald-400">+₹{fmt(f.refund)}</span>
-                          : f.payable > 0
-                            ? <span className="text-red-400">−₹{fmt(f.payable)}</span>
-                            : <span className="text-gray-600">—</span>}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${cls}`}>
-                          {f.status}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
-                        {f.filed_on || f.created_at?.slice(0, 10) || '—'}
-                      </td>
-                      <td className="py-3">
-                        <button
-                          onClick={() => deleteFiling(f.id)}
-                          className="text-gray-700 hover:text-red-400 transition-colors p-1 cursor-pointer bg-transparent border-0"
-                          title="Delete record"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {['AY', 'Form', 'Regime', 'Gross Income', 'Tax Liability', 'Saved', 'Refund / Payable', 'Status', 'Date', ''].map(h => (
+                  <TableHead key={h}>{h}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filings.map(f => (
+                <TableRow key={f.id}>
+                  <TableCell className="font-semibold text-gray-100 whitespace-nowrap">{f.ay}</TableCell>
+                  <TableCell>
+                    <Badge>{f.itr_form}</Badge>
+                  </TableCell>
+                  <TableCell className="text-gray-300 capitalize">{f.regime}</TableCell>
+                  <TableCell className="text-gray-300 whitespace-nowrap">₹{fmt(f.gross_income)}</TableCell>
+                  <TableCell className="text-gray-100 font-medium whitespace-nowrap">₹{fmt(f.tax_paid)}</TableCell>
+                  <TableCell className="text-emerald-400 whitespace-nowrap">₹{fmt(f.tax_saved)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {f.refund > 0
+                      ? <span className="text-emerald-400">+₹{fmt(f.refund)}</span>
+                      : f.payable > 0
+                        ? <span className="text-red-400">−₹{fmt(f.payable)}</span>
+                        : <span className="text-gray-600">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_VARIANT[f.status] ?? 'secondary'}>{f.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-gray-500 text-xs whitespace-nowrap">
+                    {f.filed_on || f.created_at?.slice(0, 10) || '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteFiling(f.id)}
+                      className="h-8 w-8 text-gray-700 hover:text-red-400"
+                      title="Delete record"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

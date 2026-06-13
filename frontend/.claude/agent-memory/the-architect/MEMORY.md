@@ -1,0 +1,1 @@
+- [Frontend Architecture](frontend-architecture.md) — React 19 state/polling/bundle patterns; startup waterfall, missing AbortControllers, no code-splitting, chat history bloat

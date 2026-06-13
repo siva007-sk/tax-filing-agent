@@ -3,6 +3,11 @@ import {
   Clock, ChevronRight, ExternalLink, RefreshCw, Loader,
   Shield, CheckCircle, FileText, BadgeCheck,
 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 
 const fmt = n => (n || 0).toLocaleString('en-IN');
 
@@ -20,27 +25,27 @@ function getDeadlineInfo() {
   return { days: Math.max(0, days), label: '31 July 2026' };
 }
 
-const STATUS_STYLE = {
-  'E-Verified': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: BadgeCheck },
-  'Processed':  { bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20',  icon: CheckCircle },
-  'Filed':      { bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/20',   icon: FileText },
-  default:      { bg: 'bg-gray-800',        text: 'text-gray-400',    border: 'border-gray-700',        icon: Clock },
+const STATUS_CONFIG = {
+  'E-Verified': { variant: 'success',   icon: BadgeCheck  },
+  'Processed':  { variant: 'default',   icon: CheckCircle },
+  'Filed':      { variant: 'warning',   icon: FileText    },
+  default:      { variant: 'secondary', icon: Clock       },
 };
 
 function TaxUpdatesCard() {
-  const [state, setState]           = useState(null);
-  const [localRunning, setLR]       = useState(false);
-
-  const load = () =>
-    fetch('/api/v1/corpus/status')
-      .then(r => r.json())
-      .then(data => { setState(data); if (data.status !== 'running') setLR(false); })
-      .catch(() => {});
+  const [state, setState]     = useState(null);
+  const [localRunning, setLR] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const load = () =>
+      fetch('/api/v1/corpus/status', { signal: controller.signal })
+        .then(r => r.json())
+        .then(data => { setState(data); if (data.status !== 'running') setLR(false); })
+        .catch(err => { if (err.name !== 'AbortError') {} });
     load();
     const id = setInterval(load, 30_000);
-    return () => clearInterval(id);
+    return () => { clearInterval(id); controller.abort(); };
   }, []);
 
   const triggerRefresh = async () => {
@@ -53,21 +58,23 @@ function TaxUpdatesCard() {
   const updates   = (state?.recent_updates || []).slice(0, 2);
 
   return (
-    <div className="card p-5">
+    <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
           What's New in Tax Law
         </span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={triggerRefresh}
           disabled={isRunning}
-          className="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg cursor-pointer border-0 bg-transparent disabled:opacity-50"
+          className="h-7 w-7 text-gray-500 hover:text-gray-300"
           title="Refresh tax law data"
         >
           {isRunning
             ? <Loader size={13} className="animate-spin text-indigo-400" />
             : <RefreshCw size={13} />}
-        </button>
+        </Button>
       </div>
 
       {isRunning && (
@@ -95,7 +102,7 @@ function TaxUpdatesCard() {
                 {u.snippet && (
                   <p className="text-xs text-gray-500 mt-1 line-clamp-1">{u.snippet}</p>
                 )}
-                {u.url && (
+                {u.url?.startsWith('https://') && (
                   <a
                     href={u.url}
                     target="_blank"
@@ -110,11 +117,19 @@ function TaxUpdatesCard() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
 export default function Dashboard({ profile, taxData, setTab }) {
+  if (!taxData?.summary) {
+    return (
+      <div className="animate-fade-in flex items-center justify-center h-40 text-gray-500 text-sm">
+        Calculating your tax snapshot…
+      </div>
+    );
+  }
+
   const isOptimalNew = taxData.summary.optimal_regime === 'new';
   const optimalTax   = isOptimalNew ? taxData.new_regime.total_tax : taxData.old_regime.total_tax;
   const taxSaved     = taxData.summary.tax_saved;
@@ -132,20 +147,19 @@ export default function Dashboard({ profile, taxData, setTab }) {
   return (
     <div className="animate-fade-in">
 
-      {/* ── Greeting & Deadline pill (full width) ────────────────────────── */}
+      {/* ── Greeting & Deadline pill ──────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
         <div>
           <h2 className="text-xl font-bold text-gray-100">{greeting} 👋</h2>
           <p className="text-sm text-gray-400 mt-0.5">Here's your tax snapshot for AY 2026-27.</p>
         </div>
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border shrink-0 ${
-          isUrgent
-            ? 'bg-red-500/10 text-red-400 border-red-500/30'
-            : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-        }`}>
+        <Badge
+          variant={isUrgent ? 'destructive' : 'warning'}
+          className="shrink-0 px-3 py-2 rounded-xl text-xs"
+        >
           <Clock size={12} />
           {deadlineLabel} · {days} days
-        </div>
+        </Badge>
       </div>
 
       {/* ── 2-column grid on desktop ──────────────────────────────────────── */}
@@ -155,14 +169,12 @@ export default function Dashboard({ profile, taxData, setTab }) {
         <div className="flex flex-col gap-5">
 
           {/* Tax Snapshot hero card */}
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-5 border border-gray-700/50 shadow-lg">
+          <Card className="p-5 bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700/50 shadow-lg">
             <div className="flex items-center justify-between mb-5">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Your Tax Snapshot
               </span>
-              <span className="bg-indigo-600/20 text-indigo-400 text-xs font-semibold px-2.5 py-1 rounded-full">
-                AY 2026-27
-              </span>
+              <Badge>AY 2026-27</Badge>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -182,7 +194,7 @@ export default function Dashboard({ profile, taxData, setTab }) {
                   <span className="text-gray-300 font-mono text-sm">₹{fmt(totalTDS)}</span>
                 </div>
               )}
-              <div className="h-px bg-gray-700 my-0.5" />
+              <Separator />
               {totalTDS > 0 ? (
                 <div className="flex justify-between items-center">
                   {netDiff >= 0 ? (
@@ -206,24 +218,18 @@ export default function Dashboard({ profile, taxData, setTab }) {
             </div>
 
             <div className="mt-5 flex gap-3">
-              <button
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0 active:scale-[0.98]"
-                onClick={() => setTab('filing')}
-              >
+              <Button className="flex-1 py-3" onClick={() => setTab('filing')}>
                 📁 Upload Form 16
-              </button>
-              <button
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 py-3 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0 active:scale-[0.98]"
-                onClick={() => setTab('advisor')}
-              >
+              </Button>
+              <Button variant="secondary" className="flex-1 py-3" onClick={() => setTab('advisor')}>
                 💬 Ask Mitra
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Quick Wins (only when savings > 0) */}
           {taxSaved > 0 && (
-            <div className="card p-5 border border-amber-500/20 bg-amber-500/5">
+            <Card className="p-5 border-amber-500/20 bg-amber-500/5">
               <div className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-3">
                 🎯 Quick Win
               </div>
@@ -234,59 +240,48 @@ export default function Dashboard({ profile, taxData, setTab }) {
                 <strong className="text-gray-100">{isOptimalNew ? 'New' : 'Old'} Regime</strong>.
               </p>
               <div className="flex gap-2 mt-4">
-                <button
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0"
-                  onClick={() => setTab('filing')}
-                >
+                <Button className="flex-1 py-2.5" onClick={() => setTab('filing')}>
                   Show me how
-                </button>
-                <button
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer border border-gray-700"
-                  onClick={() => setTab('advisor')}
-                >
+                </Button>
+                <Button variant="secondary" className="flex-1 py-2.5" onClick={() => setTab('advisor')}>
                   Ask Mitra
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Past Filings compact (if any) */}
           {pastFilings.length > 0 && (
-            <div className="card p-5">
+            <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Recent Filings
                 </span>
-                <button
-                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1"
-                  onClick={() => setTab('reports')}
-                >
+                <Button variant="link" size="sm" className="text-indigo-400 p-0 h-auto" onClick={() => setTab('reports')}>
                   View all <ChevronRight size={12} />
-                </button>
+                </Button>
               </div>
               <div className="flex flex-col gap-2">
-                {pastFilings.slice(0, 3).map((f, i) => {
-                  const s    = STATUS_STYLE[f.status] || STATUS_STYLE.default;
-                  const SIco = s.icon;
+                {pastFilings.slice(0, 3).map((f) => {
+                  const cfg  = STATUS_CONFIG[f.status] || STATUS_CONFIG.default;
+                  const SIco = cfg.icon;
                   return (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                    <div key={f.ay + f.itr_form} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-semibold text-gray-200">{f.ay}</span>
-                        <span className="text-xs bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-bold">
-                          {f.itr_form}
-                        </span>
+                        <Badge>{f.itr_form}</Badge>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm text-gray-300 font-mono">₹{fmt(f.tax_paid)}</span>
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${s.bg} ${s.text} ${s.border}`}>
+                        <Badge variant={cfg.variant}>
                           <SIco size={10} /> {f.status}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </Card>
           )}
 
         </div>
@@ -295,17 +290,14 @@ export default function Dashboard({ profile, taxData, setTab }) {
         <div className="flex flex-col gap-5">
 
           {/* Regime Comparison */}
-          <div className="card p-5">
+          <Card className="p-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Regime Comparison
               </span>
-              <button
-                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1"
-                onClick={() => setTab('filing')}
-              >
+              <Button variant="link" size="sm" className="text-indigo-400 p-0 h-auto" onClick={() => setTab('filing')}>
                 Calculate <ChevronRight size={12} />
-              </button>
+              </Button>
             </div>
             <div className="flex flex-col gap-4">
               {[
@@ -334,12 +326,10 @@ export default function Dashboard({ profile, taxData, setTab }) {
                         ₹{fmt(tax)} {isOpt && '✓'}
                       </span>
                     </div>
-                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${isOpt ? 'bg-emerald-500' : 'bg-gray-600'}`}
-                        style={{ width: `${Math.min(100, (tax / maxTax) * 100)}%` }}
-                      />
-                    </div>
+                    <Progress
+                      value={Math.min(100, (tax / maxTax) * 100)}
+                      indicatorClassName={isOpt ? 'bg-emerald-500' : 'bg-gray-600'}
+                    />
                   </div>
                 );
               })}
@@ -351,7 +341,7 @@ export default function Dashboard({ profile, taxData, setTab }) {
                 <span className="text-emerald-400 font-bold text-sm">₹{fmt(taxSaved)}</span>
               </div>
             )}
-          </div>
+          </Card>
 
           {/* What's New in Tax Law */}
           <TaxUpdatesCard />
@@ -359,7 +349,7 @@ export default function Dashboard({ profile, taxData, setTab }) {
         </div>
       </div>
 
-      {/* ── Trust footer (full width) ─────────────────────────────────────── */}
+      {/* ── Trust footer ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 text-xs text-gray-600 justify-center py-4 mt-2">
         <Shield size={11} className="text-indigo-400" />
         Your data is encrypted and never shared. Stored only on this device.

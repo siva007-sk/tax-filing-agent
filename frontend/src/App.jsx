@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Home, FileText, MessageSquare, BarChart2, User, Sparkles } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import TaxFiling from './components/TaxFiling';
 import Chatbot from './components/Chatbot';
 import Settings from './components/Settings';
-import Reports from './components/Reports';
-import AdminPanel from './components/AdminPanel';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const Reports    = lazy(() => import('./components/Reports'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
 
 const NAV = [
   { id: 'dashboard', label: 'Home',    icon: Home },
@@ -30,17 +33,15 @@ export default function App() {
 
   const loadContext = async () => {
     try {
-      const profRes  = await fetch('/api/v1/memory/profile');
-      const profData = await profRes.json();
+      const profData = await fetch('/api/v1/memory/profile').then(r => r.json());
       setProfile(profData);
-      const taxRes = await fetch('/api/v1/tax/calculate', {
+      fetch('/api/v1/tax/calculate', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(profData),
-      });
-      setTaxData(await taxRes.json());
-    } catch (err) {
-      console.error('Context load error:', err);
+      }).then(r => r.json()).then(setTaxData).catch(() => {});
+    } catch {
+      // profile fetch failed — backend unreachable
     }
   };
 
@@ -57,7 +58,7 @@ export default function App() {
     }
   };
 
-  if (!profile || !taxData) {
+  if (!profile) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-950">
         <div className="flex flex-col items-center gap-4 text-gray-400">
@@ -93,15 +94,16 @@ export default function App() {
 
         {/* Nav items */}
         <nav className="flex-1 flex flex-col gap-1 p-3 pt-4">
-          {NAV.slice(0, 4).map(({ id, label, icon: Icon }) => (
+          {NAV.filter(n => n.id !== 'profile').map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full ${
+              className={cn(
+                'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full font-[inherit]',
                 activeTab === id
                   ? 'bg-indigo-600 text-white shadow-lg'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-              }`}
+              )}
             >
               <Icon size={18} strokeWidth={activeTab === id ? 2.5 : 1.8} />
               {label}
@@ -113,11 +115,12 @@ export default function App() {
         <div className="p-3 border-t border-gray-800">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full ${
+            className={cn(
+              'flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer border-0 text-left w-full font-[inherit]',
               activeTab === 'profile' || activeTab === 'admin'
                 ? 'bg-indigo-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
+            )}
           >
             <User size={18} strokeWidth={activeTab === 'profile' ? 2.5 : 1.8} />
             Profile
@@ -153,9 +156,9 @@ export default function App() {
             />
           )}
           {activeTab === 'advisor'  && <Chatbot />}
-          {activeTab === 'reports'  && <Reports setTab={setActiveTab} />}
+          {activeTab === 'reports'  && <Suspense fallback={<div className="text-gray-500 text-sm py-10 text-center">Loading…</div>}><Reports setTab={setActiveTab} /></Suspense>}
           {activeTab === 'profile'  && <Settings onClearMemory={handleClearMemory} setTab={setActiveTab} theme={theme} toggleTheme={toggleTheme} />}
-          {activeTab === 'admin'    && <AdminPanel />}
+          {activeTab === 'admin'    && <Suspense fallback={<div className="text-gray-500 text-sm py-10 text-center">Loading…</div>}><AdminPanel /></Suspense>}
         </div>
       </main>
 
@@ -169,17 +172,19 @@ export default function App() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 min-w-[56px] ${
+              className={cn(
+                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all cursor-pointer border-0 min-w-[56px] font-[inherit]',
                 activeTab === id || (id === 'profile' && activeTab === 'admin')
                   ? 'text-indigo-400'
                   : 'text-gray-500'
-              }`}
+              )}
             >
-              <div className={`p-1.5 rounded-xl transition-all ${
+              <div className={cn(
+                'p-1.5 rounded-xl transition-all',
                 activeTab === id || (id === 'profile' && activeTab === 'admin')
                   ? 'bg-indigo-600/20'
                   : ''
-              }`}>
+              )}>
                 <Icon
                   size={20}
                   strokeWidth={activeTab === id || (id === 'profile' && activeTab === 'admin') ? 2.5 : 1.8}

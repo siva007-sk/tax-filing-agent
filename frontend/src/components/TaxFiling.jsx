@@ -1,8 +1,12 @@
 import { Fragment, useState } from 'react';
 import {
-  Upload, PenLine, ArrowRight, ArrowLeft, CheckCircle, FileText,
+  ArrowRight, ArrowLeft, CheckCircle, FileText,
   Sparkles, ChevronDown, ChevronUp, Download, AlertCircle, Loader, Database,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 const fmt = n => (n || 0).toLocaleString('en-IN');
 
@@ -101,8 +105,8 @@ function Field({ label, value, onChange, placeholder = '0', type = 'number', pre
     <div className="field-row">
       <label className="form-label">{label}</label>
       <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">{prefix}</span>}
-        <input
+        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none z-10">{prefix}</span>}
+        <Input
           type={type}
           value={value}
           onChange={e => onChange(e.target.value)}
@@ -118,17 +122,17 @@ function Field({ label, value, onChange, placeholder = '0', type = 'number', pre
 function Section({ title, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="card overflow-hidden">
+    <Card className="overflow-hidden p-0">
       <button
         type="button"
-        className="w-full flex justify-between items-center px-5 py-4 text-sm font-bold text-gray-100 hover:bg-gray-800/50 transition-colors"
+        className="w-full flex justify-between items-center px-5 py-4 text-sm font-bold text-gray-100 hover:bg-gray-800/50 transition-colors cursor-pointer border-0 bg-transparent font-[inherit]"
         onClick={() => setOpen(o => !o)}
       >
         {title}
         {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
       </button>
       {open && <div className="px-5 pb-5 pt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div>}
-    </div>
+    </Card>
   );
 }
 
@@ -179,6 +183,18 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
 
   const handleForm16Upload = async (file) => {
     if (!file) return;
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const ALLOWED  = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (file.size > MAX_SIZE) {
+      setUploadMsg('File too large. Maximum size is 10 MB.');
+      setStep(1);
+      return;
+    }
+    if (!ALLOWED.includes(file.type)) {
+      setUploadMsg('Invalid file type. Only PDF, JPG, and PNG are accepted.');
+      setStep(1);
+      return;
+    }
     setUploading(true);
     setUploadMsg('');
     const fd = new FormData();
@@ -224,7 +240,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       setResult(taxData);
       setItr(itrData);
       setSug(suggestItrForm(profile));
-      await fetch('/api/v1/memory/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) });
+      fetch('/api/v1/memory/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) }).catch(console.error);
       setGlobalProfile(profile);
       setTaxData(taxData);
       setStep(4);
@@ -287,7 +303,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     const blob = new Blob([JSON.stringify(itr?.itr_json, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `ITR_AY2026-27_${form.personal.pan || 'return'}.json`;
+    a.download = `ITR_AY2026-27_return.json`;
     a.click();
   };
 
@@ -302,47 +318,53 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Chat as hero – primary CTA */}
-        <button
-          className="card p-6 border-2 border-indigo-600/50 bg-indigo-600/5 hover:border-indigo-500 hover:bg-indigo-600/10 cursor-pointer transition-all text-left group flex flex-col"
+        <Card
+          className="p-6 border-2 border-indigo-600/50 bg-indigo-600/5 hover:border-indigo-500 hover:bg-indigo-600/10 cursor-pointer transition-all text-left group flex flex-col"
           onClick={() => setTab('advisor')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && setTab('advisor')}
         >
           <div className="text-3xl bg-indigo-600/20 p-3 rounded-xl group-hover:bg-indigo-600/30 transition-colors w-fit mb-4">
             🤖
           </div>
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <span className="font-bold text-gray-100">Chat with Mitra</span>
-            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-full uppercase tracking-wide">
-              Recommended
-            </span>
+            <Badge className="text-[10px] uppercase tracking-wide">Recommended</Badge>
           </div>
           <p className="text-sm text-gray-400 leading-relaxed flex-1">
             "Just tell me about your income and I'll handle the forms."
           </p>
           <p className="text-xs text-gray-500 mt-3">Takes 3–5 minutes</p>
-        </button>
+        </Card>
 
         {/* Upload Form 16 */}
-        <label className="card p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 cursor-pointer transition-all group flex flex-col">
-          <input type="file" accept=".pdf,.jpg,.png" className="hidden" onChange={e => handleForm16Upload(e.target.files[0])} />
-          <div className="text-3xl bg-gray-800 p-3 rounded-xl group-hover:bg-gray-700 transition-colors w-fit mb-4">
-            📄
-          </div>
-          <span className="font-bold text-gray-100 mb-2">Upload Form 16</span>
-          <p className="text-sm text-gray-400 leading-relaxed flex-1">
-            Have your employer's Form 16? I'll read it and fill everything automatically.
-          </p>
-          <p className="text-xs text-gray-500 mt-3">Usually takes 30 seconds</p>
-          {uploading && (
-            <div className="flex items-center gap-2 text-xs text-indigo-400 mt-2">
-              <Loader size={12} className="animate-spin" /> Extracting data…
+        <label className="cursor-pointer group">
+          <Card className="p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 transition-all flex flex-col h-full">
+            <input type="file" accept=".pdf,.jpg,.png" className="hidden" onChange={e => handleForm16Upload(e.target.files[0])} />
+            <div className="text-3xl bg-gray-800 p-3 rounded-xl group-hover:bg-gray-700 transition-colors w-fit mb-4">
+              📄
             </div>
-          )}
+            <span className="font-bold text-gray-100 mb-2">Upload Form 16</span>
+            <p className="text-sm text-gray-400 leading-relaxed flex-1">
+              Have your employer's Form 16? I'll read it and fill everything automatically.
+            </p>
+            <p className="text-xs text-gray-500 mt-3">Usually takes 30 seconds</p>
+            {uploading && (
+              <div className="flex items-center gap-2 text-xs text-indigo-400 mt-2">
+                <Loader size={12} className="animate-spin" /> Extracting data…
+              </div>
+            )}
+          </Card>
         </label>
 
         {/* Manual entry */}
-        <button
-          className="card p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 cursor-pointer transition-all text-left group flex flex-col"
+        <Card
+          className="p-6 border-2 border-transparent hover:border-indigo-500/30 hover:bg-gray-800/40 cursor-pointer transition-all text-left group flex flex-col"
           onClick={() => setStep(1)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => e.key === 'Enter' && setStep(1)}
         >
           <div className="text-3xl bg-gray-800 p-3 rounded-xl group-hover:bg-gray-700 transition-colors w-fit mb-4">
             ✏️
@@ -352,7 +374,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
             Prefer to fill in your numbers? I'll guide you section by section.
           </p>
           <p className="text-xs text-gray-500 mt-3">Best for complex cases</p>
-        </button>
+        </Card>
 
       </div>
 
@@ -375,7 +397,7 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       <Section title="Personal Details">
         <div className="field-row">
           <label className="form-label">PAN</label>
-          <input type="text" value={form.personal.pan} onChange={e => setPersonal('pan', e.target.value.toUpperCase())} placeholder="XXXXX0000X" maxLength={10} />
+          <Input type="text" value={form.personal.pan} onChange={e => setPersonal('pan', e.target.value.toUpperCase())} placeholder="XXXXX0000X" maxLength={10} />
         </div>
         <div className="field-row">
           <label className="form-label">Age Category</label>
@@ -418,8 +440,8 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       </Section>
 
       <div className="flex justify-between pt-2">
-        <button className="btn-secondary" onClick={() => setStep(0)}><ArrowLeft size={15} /> Back</button>
-        <button className="btn-primary" onClick={() => setStep(2)}>Next: Deductions <ArrowRight size={15} /></button>
+        <Button variant="secondary" onClick={() => setStep(0)}><ArrowLeft size={15} /> Back</Button>
+        <Button onClick={() => setStep(2)}>Next: Deductions <ArrowRight size={15} /></Button>
       </div>
     </div>
   );
@@ -470,8 +492,8 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       </Section>
 
       <div className="flex justify-between pt-2">
-        <button className="btn-secondary" onClick={() => setStep(1)}><ArrowLeft size={15} /> Back</button>
-        <button className="btn-primary" onClick={() => setStep(3)}>Next: Tax Paid <ArrowRight size={15} /></button>
+        <Button variant="secondary" onClick={() => setStep(1)}><ArrowLeft size={15} /> Back</Button>
+        <Button onClick={() => setStep(3)}>Next: Tax Paid <ArrowRight size={15} /></Button>
       </div>
     </div>
   );
@@ -488,10 +510,10 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
       </Section>
 
       <div className="flex justify-between pt-2">
-        <button className="btn-secondary" onClick={() => setStep(2)}><ArrowLeft size={15} /> Back</button>
-        <button className="btn-primary" onClick={handleCalculate} disabled={calculating}>
+        <Button variant="secondary" onClick={() => setStep(2)}><ArrowLeft size={15} /> Back</Button>
+        <Button onClick={handleCalculate} disabled={calculating}>
           {calculating ? <><Loader size={15} className="animate-spin" /> Calculating…</> : <><Sparkles size={15} /> Calculate &amp; Suggest ITR</>}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -504,60 +526,60 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
     const totalPaid = tp.tds_salary + tp.tds_other + tp.advance_tax;
     const netDiff  = totalPaid - optTax;
 
-    const accentMap = {
-      emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500', text: 'text-emerald-400' },
-      indigo:  { bg: 'bg-indigo-500/10',  border: 'border-indigo-500',  text: 'text-indigo-400' },
-      amber:   { bg: 'bg-amber-500/10',   border: 'border-amber-500',   text: 'text-amber-400' },
+    const ACCENT = {
+      emerald: { border: 'border-emerald-500', text: 'text-emerald-400', bg: 'bg-emerald-500/10', badge: 'success' },
+      indigo:  { border: 'border-indigo-500',  text: 'text-indigo-400',  bg: 'bg-indigo-500/10',  badge: 'default' },
+      amber:   { border: 'border-amber-500',   text: 'text-amber-400',   bg: 'bg-amber-500/10',   badge: 'warning' },
     };
-    const ac = accentMap[suggestion.accent];
+    const { border, text: acTxt, bg: acBg, badge: badgeV } = ACCENT[suggestion.accent];
 
     return (
       <div className="animate-fade-in flex flex-col gap-5">
         <StepBar step={step} />
 
         {/* ITR form suggestion */}
-        <div className={`card p-6 border-l-4 ${ac.border} ${ac.bg}`}>
+        <Card className={`p-6 border-l-4 ${border} ${acBg}`}>
           <div className="flex justify-between items-start flex-wrap gap-4">
             <div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${ac.text}`}>Engine Recommendation</span>
+              <span className={`text-xs font-bold uppercase tracking-widest ${acTxt}`}>Engine Recommendation</span>
               <h2 className="text-2xl font-extrabold text-gray-100 mt-1 flex items-center gap-3">
-                <FileText size={22} className={ac.text} />
-                File using <span className={ac.text}>{suggestion.form}</span>
+                <FileText size={22} className={acTxt} />
+                File using <span className={acTxt}>{suggestion.form}</span>
               </h2>
               <p className="text-xs text-gray-400 mt-2">{suggestion.note}</p>
             </div>
             <div className="flex flex-col gap-1">
               {suggestion.reasons.map(r => (
-                <span key={r} className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${ac.bg} ${ac.text} border ${ac.border}`}>
+                <Badge key={r} variant={badgeV} className="gap-1.5">
                   <CheckCircle size={11} /> {r}
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Regime & tax cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className={`card p-5 border-l-4 ${isNew ? 'border-emerald-500 bg-emerald-500/5' : 'border-indigo-500 bg-indigo-500/5'}`}>
+          <Card className={`p-5 border-l-4 ${isNew ? 'border-emerald-500 bg-emerald-500/5' : 'border-indigo-500 bg-indigo-500/5'}`}>
             <div className="form-label">Optimal Regime</div>
             <div className={`text-xl font-extrabold ${isNew ? 'text-emerald-400' : 'text-indigo-400'}`}>
               {isNew ? 'New Tax Regime' : 'Old Tax Regime'}
             </div>
             <div className="text-xs text-gray-400 mt-1">Saves ₹{fmt(result.summary.tax_saved)} vs the alternative</div>
-          </div>
-          <div className="card p-5">
+          </Card>
+          <Card className="p-5">
             <div className="form-label">Net Tax Liability</div>
             <div className="text-xl font-extrabold text-gray-100">₹{fmt(optTax)}</div>
             <div className="text-xs text-gray-400 mt-1">
               New: ₹{fmt(result.new_regime.total_tax)} · Old: ₹{fmt(result.old_regime.total_tax)}
             </div>
-          </div>
-          <div className={`card p-5 border-l-4 ${netDiff >= 0 ? 'border-emerald-500' : 'border-red-500'}`}>
+          </Card>
+          <Card className={`p-5 border-l-4 ${netDiff >= 0 ? 'border-emerald-500' : 'border-red-500'}`}>
             <div className="form-label">{netDiff >= 0 ? 'Estimated Refund' : 'Tax Payable'}</div>
             <div className={`text-xl font-extrabold ${netDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>₹{fmt(Math.abs(netDiff))}</div>
             <div className="text-xs text-gray-400 mt-1">TDS paid: ₹{fmt(totalPaid)}</div>
-          </div>
-          <div className="card p-5">
+          </Card>
+          <Card className="p-5">
             <div className="form-label">Taxable Income</div>
             <div className="text-xl font-extrabold text-gray-100">
               ₹{fmt(isNew ? result.new_regime.taxable_income : result.old_regime.taxable_income)}
@@ -567,11 +589,11 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
                 ? `After SD ₹${fmt(result.new_regime.standard_deduction)}`
                 : `After SD + deductions ₹${fmt(result.old_regime.deductions.total + result.old_regime.standard_deduction)}`}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Tax breakdown */}
-        <div className="card p-6">
+        <Card className="p-6">
           <h3 className="text-sm font-bold text-gray-100 mb-4">Tax Computation Breakdown</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
             {[
@@ -590,30 +612,26 @@ export default function TaxFiling({ setProfile: setGlobalProfile, setTaxData, se
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Actions */}
         <div className="flex flex-wrap gap-3">
-          <button className="btn-success" onClick={downloadItr}>
+          <Button variant="success" onClick={downloadItr}>
             <Download size={15} /> Download ITR JSON
-          </button>
-          <button
-            className="btn-primary"
-            onClick={saveToRecords}
-            disabled={saving || !!savedId}
-          >
+          </Button>
+          <Button onClick={saveToRecords} disabled={saving || !!savedId}>
             {saving
               ? <><Loader size={15} className="animate-spin" /> Saving…</>
               : savedId
                 ? <><CheckCircle size={15} /> Saved to Records</>
                 : <><Database size={15} /> Save to Records</>}
-          </button>
-          <button className="btn-secondary" onClick={() => setTab('reports')}>
+          </Button>
+          <Button variant="secondary" onClick={() => setTab('reports')}>
             View Reports <ArrowRight size={15} />
-          </button>
-          <button className="btn-secondary" onClick={() => { setStep(0); setForm(EMPTY_FORM); setResult(null); setSavedId(null); }}>
+          </Button>
+          <Button variant="secondary" onClick={() => { setStep(0); setForm(EMPTY_FORM); setResult(null); setSavedId(null); }}>
             Start Over
-          </button>
+          </Button>
         </div>
       </div>
     );

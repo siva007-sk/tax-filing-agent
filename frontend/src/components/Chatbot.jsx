@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Trash2, Loader, TrendingDown, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const fmt = n => (n || 0).toLocaleString('en-IN');
 
@@ -65,12 +67,9 @@ function ScenarioCard({ onSendMessage, onClose }) {
           <TrendingDown size={16} className="text-amber-400" />
           <span className="text-sm font-semibold text-gray-100">Scenario Simulator</span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer border-0 bg-transparent"
-        >
+        <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-500 h-7">
           Done
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-col gap-4 mb-5">
@@ -97,22 +96,14 @@ function ScenarioCard({ onSendMessage, onClose }) {
       </div>
 
       <div className="flex gap-2 mb-4">
-        <button
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer border-0 disabled:opacity-50"
-          onClick={run}
-          disabled={loading}
-        >
+        <Button className="flex-1" onClick={run} disabled={loading}>
           {loading
             ? <span className="flex items-center justify-center gap-1.5"><Loader size={13} className="animate-spin" /> Running…</span>
             : 'Simulate Impact'}
-        </button>
-        <button
-          className="px-4 py-2.5 text-gray-500 hover:text-gray-300 transition-colors cursor-pointer border-0 bg-transparent rounded-xl hover:bg-gray-700"
-          onClick={reset}
-          title="Reset"
-        >
+        </Button>
+        <Button variant="ghost" size="icon" onClick={reset} title="Reset">
           <RotateCcw size={15} />
-        </button>
+        </Button>
       </div>
 
       {simResult && (
@@ -138,8 +129,10 @@ function ScenarioCard({ onSendMessage, onClose }) {
               <span className="text-amber-400 font-bold font-mono">₹{fmt(bestSaving)}</span>
             </div>
           )}
-          <button
-            className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer border-0 bg-transparent w-full text-center"
+          <Button
+            variant="link"
+            size="sm"
+            className="mt-3 text-indigo-400 w-full justify-center"
             onClick={() => {
               const parts = SCENARIO_FIELDS
                 .filter(f => vals[f.key] > 0)
@@ -149,7 +142,7 @@ function ScenarioCard({ onSendMessage, onClose }) {
             }}
           >
             Ask Mitra to explain this scenario →
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -167,7 +160,7 @@ export default function Chatbot() {
   const [loading, setLoading]         = useState(false);
   const [showSimulator, setShowSim]   = useState(false);
   const [autoScroll, setAutoScroll]   = useState(true);
-  const endRef  = useRef(null);
+  const endRef   = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -176,7 +169,7 @@ export default function Chatbot() {
 
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
-    if (!msg) return;
+    if (!msg || loading) return;
     setInput('');
     setAutoScroll(true);
     setShowSim(false);
@@ -190,7 +183,7 @@ export default function Chatbot() {
       const res  = await fetch('/api/v1/chat', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message: msg, history: next.slice(0, -1) }),
+        body:    JSON.stringify({ message: msg, history: next.slice(-10, -1) }),
       });
       const data = await res.json();
       const isErr = data.error === 'llm_unavailable';
@@ -243,23 +236,23 @@ export default function Chatbot() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            size="sm"
+            variant={showSimulator ? 'outline' : 'ghost'}
             onClick={() => setShowSim(s => !s)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer border-0 font-medium ${
-              showSimulator
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-            }`}
+            className={showSimulator ? 'text-amber-400 border-amber-500/30 bg-amber-500/20 hover:bg-amber-500/30' : ''}
           >
             🎚️ Simulate
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={clearChat}
-            className="text-gray-500 hover:text-gray-300 transition-colors p-1.5 cursor-pointer bg-transparent border-0 rounded-lg hover:bg-gray-800"
+            className="h-8 w-8 text-gray-500 hover:text-gray-300"
             title="Clear chat"
           >
             <Trash2 size={14} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -271,8 +264,8 @@ export default function Chatbot() {
           setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 60);
         }}
       >
-        {messages.map((m, i) => (
-          <div key={i}>
+        {messages.map((m) => (
+          <div key={m.ts}>
             {m.role === 'user' ? (
               <div className="flex flex-col items-end gap-1">
                 <div className="bg-indigo-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed max-w-[82%]">
@@ -301,13 +294,15 @@ export default function Chatbot() {
                 {m.showQuick && (
                   <div className="flex flex-wrap gap-2 mt-1">
                     {QUICK_QUESTIONS.map(q => (
-                      <button
+                      <Button
                         key={q.text}
+                        variant="outline"
+                        size="sm"
                         onClick={() => sendMessage(q.text)}
-                        className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700/50 text-gray-300 hover:text-gray-100 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
+                        className="rounded-full text-xs h-7"
                       >
                         {q.emoji} {q.text}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 )}
@@ -344,22 +339,23 @@ export default function Chatbot() {
       {/* ── Input ─────────────────────────────────────────────────────────── */}
       <div className="px-4 py-3 border-t border-gray-800 bg-gray-900 shrink-0">
         <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
-          <input
+          <Input
             ref={inputRef}
             type="text"
             placeholder="Ask about 80C, HRA, regime choice, ITR deadlines…"
             value={input}
             onChange={e => setInput(e.target.value)}
             disabled={loading}
-            className="flex-1 min-w-0"
+            className="flex-1 min-w-0 rounded-xl"
           />
-          <button
-            className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white p-2.5 rounded-xl shrink-0 cursor-pointer border-0 transition-all disabled:opacity-40"
+          <Button
             type="submit"
+            size="icon"
             disabled={loading || !input.trim()}
+            className="shrink-0"
           >
             <Send size={16} />
-          </button>
+          </Button>
         </form>
       </div>
     </div>
