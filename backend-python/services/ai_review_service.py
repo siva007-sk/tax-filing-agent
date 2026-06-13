@@ -126,10 +126,20 @@ async def review_itr(profile: dict, tax_data: dict) -> dict:
     ai_narrative = ""
     try:
         flag_text = "; ".join(f["item"] for f in flags) or "None"
+        # Anonymize: send income bracket, not exact figures, to avoid PII leakage to LLM endpoint
+        if gross_salary > 2_500_000:
+            income_bracket = "high (>₹25L)"
+        elif gross_salary > 1_000_000:
+            income_bracket = "medium (₹10L-₹25L)"
+        elif gross_salary > 500_000:
+            income_bracket = "moderate (₹5L-₹10L)"
+        else:
+            income_bracket = "low (<₹5L)"
+        tax_balance = "refund" if total_tds >= computed_tax else "payable"
         summary_text = (
-            f"Gross Income: ₹{gross_salary:,}, Regime: {chosen_regime}, "
-            f"Tax Liability: ₹{computed_tax:,}, TDS Paid: ₹{total_tds:,}, "
-            f"80C: ₹{total_80c:,}, Flags: {len(flags)} ({flag_text})"
+            f"Income bracket: {income_bracket}, Regime: {chosen_regime}, "
+            f"Tax balance: {tax_balance}, 80C claimed: {'within limit' if total_80c <= 150_000 else 'over limit'}, "
+            f"Flags: {len(flags)} ({flag_text}), Score: {score}/100"
         )
         ai_narrative = await call_llm(
             [

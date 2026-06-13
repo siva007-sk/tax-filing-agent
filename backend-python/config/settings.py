@@ -34,7 +34,8 @@ if _origins_env:
 elif IS_PROD:
     ALLOWED_ORIGINS = ["http://localhost", "http://frontend"]
 else:
-    ALLOWED_ORIGINS = ["*"]
+    # Never use ["*"] — even in dev, wildcard with credentials is a security misconfiguration.
+    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:3000", "http://localhost:5000"]
 
 # ── Rate limiting (requests per minute per IP) ────────────────────────────────
 

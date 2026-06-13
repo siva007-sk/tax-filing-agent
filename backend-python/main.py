@@ -47,8 +47,10 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("Database initialised.")
 
-    from services.update_scheduler import start_scheduler, stop_scheduler
+    import asyncio as _asyncio
+    from services.update_scheduler import _initial_update, start_scheduler, stop_scheduler
     start_scheduler()
+    _asyncio.create_task(_initial_update())
 
     yield
 
@@ -76,7 +78,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
 

@@ -11,14 +11,22 @@ Standard guidance for common notices:
 Consult a Chartered Accountant immediately if the demand exceeds ₹10,000 or involves scrutiny assessment."""
 
 
+def _mask_pan(pan: str) -> str:
+    """Return a masked PAN safe to send to external LLM endpoints."""
+    if pan and len(pan) == 10:
+        return pan[:2] + "XXXXX" + pan[7:]
+    return "N/A"
+
+
 async def analyze_notice(notice_text: str, profile: dict) -> dict:
     ay = profile.get("assessment_year", "2026-27")
-    pan = profile.get("personal", {}).get("pan", "N/A")
+    raw_pan = profile.get("personal", {}).get("pan", "")
+    pan_display = _mask_pan(raw_pan) if raw_pan else "N/A"
 
     prompt = (
         f"An Indian taxpayer received the following Income Tax Department / CPC notice:\n\n"
         f"--- NOTICE TEXT ---\n{notice_text}\n--- END ---\n\n"
-        f"Taxpayer context: AY {ay}, PAN: {pan}.\n\n"
+        f"Taxpayer context: AY {ay}, PAN: {pan_display}.\n\n"
         "Analyze and provide exactly these sections:\n\n"
         "1. NOTICE TYPE\n"
         "   (e.g., Section 143(1) intimation, Section 148 reassessment, Section 139(9) defective return)\n\n"

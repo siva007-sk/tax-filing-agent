@@ -17,6 +17,27 @@ from database import (
     upsert_corpus_section,
 )
 
+_VALUE_BOUNDS: dict[str, tuple[float, float]] = {
+    "standard_deduction.new_regime":                (25_000, 200_000),
+    "standard_deduction.old_regime":                (25_000, 100_000),
+    "rebates.section_87a.new_regime.limit":         (500_000, 2_000_000),
+    "rebates.section_87a.new_regime.max_rebate":    (10_000, 100_000),
+    "rebates.section_87a.old_regime.limit":         (200_000, 1_000_000),
+    "rebates.section_87a.old_regime.max_rebate":    (5_000, 50_000),
+    "cess_rate":                                    (0.01, 0.10),
+    "chapter_via_limits.80C":                       (100_000, 300_000),
+    "chapter_via_limits.80D_self_general":          (10_000, 50_000),
+    "chapter_via_limits.80D_self_senior":           (25_000, 100_000),
+    "chapter_via_limits.80D_parents_general":       (10_000, 50_000),
+    "chapter_via_limits.80D_parents_senior":        (25_000, 100_000),
+    "chapter_via_limits.80CCD_1B":                  (25_000, 100_000),
+    "chapter_via_limits.80TTA":                     (5_000, 25_000),
+    "chapter_via_limits.80TTB":                     (25_000, 100_000),
+    "chapter_via_limits.80EEA":                     (100_000, 300_000),
+    "chapter_via_limits.80U_normal":                (50_000, 150_000),
+    "chapter_via_limits.80U_severe":                (75_000, 200_000),
+}
+
 _VALID_FIELD_PATHS = {
     "standard_deduction.new_regime",
     "standard_deduction.old_regime",
@@ -216,6 +237,13 @@ async def analyze_and_apply_new_updates() -> dict:
                     new_value = float(new_value)
                 except (TypeError, ValueError):
                     continue
+
+                bounds = _VALUE_BOUNDS.get(field_path)
+                if bounds:
+                    lo, hi = bounds
+                    if not (lo <= new_value <= hi):
+                        print(f"[RegAnalyzer] REJECTED out-of-bounds: {field_path}={new_value} (allowed {lo}–{hi})")
+                        continue
 
                 old_value = _get_old_value(rules, field_path)
                 if old_value == new_value:

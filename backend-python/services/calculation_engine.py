@@ -1,5 +1,8 @@
 import json
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── rules cache ────────────────────────────────────────────────────────────────
 
@@ -33,7 +36,7 @@ def _load_rules() -> dict:
             _rules_cache = db_rules
             return _rules_cache
     except Exception:
-        pass
+        logger.warning("Failed to load tax rules from DB, using fallback", exc_info=True)
     with open(_CORPUS_FALLBACK_PATH, encoding="utf-8") as f:
         corpus = json.load(f)
     _rules_cache = {**corpus, "chapter_via_limits": _CHAPTER_VIA_FALLBACK}
@@ -172,8 +175,12 @@ def compute_tax(profile: dict) -> dict:
     new_taxable_ord  = round_to_nearest_ten(max(0.0, new_ordinary_gti - new_sd))
     new_slab_tax     = calculate_slab_tax(new_taxable_ord, new_slabs)
 
-    # Total taxable income for 87A eligibility check (includes full CG — not net of exemption)
-    new_total_taxable = new_taxable_ord + stcg_111a + ltcg_112a
+    # Taxable CG amounts (LTCG net of the ₹1.25L statutory exemption u/s 112A)
+    # Used for 87A threshold and surcharge — we use post-exemption taxable CG, not gross receipts.
+    ltcg_taxable_amt = max(0.0, ltcg_112a - ltcg_exempt)
+
+    # Total taxable income for 87A eligibility check (LTCG net of exemption, as per total-income definition)
+    new_total_taxable = new_taxable_ord + stcg_111a + ltcg_taxable_amt
     new_base_tax      = new_slab_tax + cg_tax
 
     # 87A rebate (new regime): with marginal relief for income just above ₹12L
@@ -277,7 +284,7 @@ def compute_tax(profile: dict) -> dict:
     total_via = d80c + d80d + d80ccd + d80e + d80g + d80eea + savings_int + d80u
 
     old_taxable_ord   = round_to_nearest_ten(max(0.0, old_ordinary_gti - total_via))
-    old_total_taxable = old_taxable_ord + stcg_111a + ltcg_112a
+    old_total_taxable = old_taxable_ord + stcg_111a + ltcg_taxable_amt
     old_slab_tax      = calculate_slab_tax(old_taxable_ord, old_slabs)
     old_base_tax      = old_slab_tax + cg_tax
 
@@ -312,7 +319,7 @@ def compute_tax(profile: dict) -> dict:
             "total_tax":            new_total_tax,
         },
         "old_regime": {
-            "gross_total_income":   old_ordinary_gti + total_via + stcg_111a + ltcg_112a,
+            "gross_total_income":   old_ordinary_gti + stcg_111a + ltcg_112a,
             "hra_exemption":        hra_exemption,
             "lta_exemption":        lta_exemption,
             "standard_deduction":   old_sd,

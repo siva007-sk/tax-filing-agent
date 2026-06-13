@@ -1,7 +1,16 @@
 import copy
 import csv
 import io
+import logging
+import re
 from datetime import UTC, datetime
+from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
+
+_PAN_RE = re.compile(r'^[A-Z]{5}[0-9]{4}[A-Z]$')
+_VALID_REGIMES = {"new", "old"}
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -98,8 +107,15 @@ async def parse_document_route(
 ):
     if not file:
         raise HTTPException(status_code=400, detail="No file uploaded")
+    if document_type not in {"form16", "form26as", "ais"}:
+        raise HTTPException(status_code=400, detail="document_type must be form16, form26as, or ais")
 
-    content = await file.read()
+    content = await file.read(_MAX_UPLOAD_BYTES + 1)
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large. Maximum 10 MB allowed.")
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+
     result = await parse_document(content, file.filename, document_type)
 
     if result.get("success"):
@@ -210,7 +226,12 @@ async def simulate_scenario(request: Request):
 
     for change in changes:
         section = change.get("section")
-        amount  = float(change.get("amount", 0))
+        try:
+            amount = float(change.get("amount", 0))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"Invalid amount for section '{section}'")
+        if amount < 0:
+            raise HTTPException(status_code=400, detail=f"Amount cannot be negative for section '{section}'")
         path    = _map.get(section)
         if not path:
             continue
@@ -256,6 +277,10 @@ async def generate_itr(request: Request):
     body    = await request.json()
     regime  = body.get("regime")
     ay      = body.get("ay", "2026-27")
+
+    if regime and regime not in _VALID_REGIMES:
+        raise HTTPException(status_code=400, detail="regime must be 'new' or 'old'")
+
     profile = _get_profile()
     tax     = compute_tax(profile)
     sel     = regime or tax["summary"]["optimal_regime"]
@@ -264,8 +289,25 @@ async def generate_itr(request: Request):
 
     sal          = profile["income"]["salary"]
     gross_salary = sal.get("basic", 0) + sal.get("hra", 0) + sal.get("lta", 0) + sal.get("special", 0)
+    cg           = profile["income"]["capital_gains"]
+    has_cg       = (cg.get("stcg_111a", 0) + cg.get("ltcg_112a", 0)) > 0
+    hp           = profile["income"]["house_property"]
+    has_hp_loss  = (hp.get("rental", 0) - hp.get("municipal_taxes", 0) * 0.7 - hp.get("interest_paid", 0)) < 0
+    has_business = profile["income"]["business_profession"].get("turnover", 0) > 0
+
+    # ITR form selection per CLAUDE.md rules
+    if has_business:
+        itr_form = "ITR-3"
+    elif has_cg or gross_salary > 5_000_000 or has_hp_loss:
+        itr_form = "ITR-2"
+    else:
+        itr_form = "ITR-1"
+
     tp           = profile["tax_paid"]
-    total_paid   = tp.get("tds_salary", 0) + tp.get("tds_other", 0) + tp.get("advance_tax", 0)
+    total_paid   = (
+        tp.get("tds_salary", 0) + tp.get("tds_other", 0)
+        + tp.get("advance_tax", 0) + tp.get("self_assessment_tax", 0)
+    )
 
     new_r = tax["new_regime"]
     old_r = tax["old_regime"]
@@ -274,7 +316,7 @@ async def generate_itr(request: Request):
         "ITR": {
             "Header": {
                 "SchemaVersion":  "2.0.0",
-                "FormName":       "ITR-2" if gross_salary > 5_000_000 else "ITR-1",
+                "FormName":       itr_form,
                 "AssessmentYear": ay,
                 "SoftwareName":   "TaxMe",
                 "SoftwareVersion":"1.0.0",
@@ -338,7 +380,7 @@ async def generate_itr(request: Request):
 
     return {
         "regime":                sel,
-        "itr_form":              "ITR-2" if gross_salary > 5_000_000 else "ITR-1",
+        "itr_form":              itr_form,
         "total_liability":       total_tax,
         "net_payable_refundable": itr_json["ITR"]["NetRefundPayable"],
         "itr_json":              itr_json,
@@ -352,11 +394,25 @@ def get_profile():
     return _get_profile()
 
 
+def _deep_merge(base: dict, updates: dict) -> dict:
+    """Recursively merge updates into base, preserving sibling keys in nested dicts."""
+    for key, value in updates.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
 @router.post("/memory/update")
 async def update_profile(request: Request):
     updates = await request.json()
+    # Validate PAN if present
+    pan = updates.get("personal", {}).get("pan", "")
+    if pan and not _PAN_RE.match(pan.upper()):
+        raise HTTPException(status_code=400, detail="Invalid PAN format. Must match AAAAA9999A.")
     profile = _get_profile()
-    profile.update(updates)
+    _deep_merge(profile, updates)
     _set_profile(profile)
     return {"success": True, "profile": _get_profile()}
 
@@ -366,7 +422,13 @@ def clear_memory():
     clear_profile()
     clear_documents()
     clear_filings()
-    return {"success": True, "message": "User memory, documents, and filing records cleared."}
+    erased_at = datetime.now(UTC).isoformat()
+    logger.info("DPDP_ERASURE cleared_tables=[tax_profiles,uploaded_documents,tax_filings] at=%s", erased_at)
+    return {
+        "success": True,
+        "message": "All PII erased per DPDP Act Section 13.",
+        "erased_at": erased_at,
+    }
 
 
 # ── AI review ─────────────────────────────────────────────────────────────────
@@ -479,6 +541,13 @@ def llm_config_get():
     return get_llm_config()
 
 
+_SSRF_BLOCKED_HOSTS = {
+    "169.254.169.254",       # AWS/GCP metadata
+    "metadata.google.internal",
+    "100.100.100.200",       # Alibaba metadata
+}
+
+
 @router.post("/llm/config")
 async def llm_config_set(request: Request):
     body     = await request.json()
@@ -490,6 +559,11 @@ async def llm_config_set(request: Request):
         raise HTTPException(status_code=400, detail="url is required")
     if not model:
         raise HTTPException(status_code=400, detail="model is required")
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="url must use http or https")
+    if parsed.hostname in _SSRF_BLOCKED_HOSTS:
+        raise HTTPException(status_code=400, detail="Invalid LLM URL")
     return update_llm_config(url, model, provider, api_key)
 
 

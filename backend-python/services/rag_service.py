@@ -1,7 +1,13 @@
 import json
+import logging
 from pathlib import Path
 
 import httpx
+
+logger = logging.getLogger(__name__)
+
+_MAX_CHAT_HISTORY_TURNS = 8   # keep last 8 user+assistant pairs (16 messages)
+_MAX_TOKENS_PER_HISTORY_MSG = 500
 
 from config.settings import LLM_MODEL, LLM_URL
 
@@ -24,7 +30,7 @@ def _load_corpus() -> list:
             _corpus_cache = sections
             return _corpus_cache
     except Exception:
-        pass
+        logger.warning("Failed to load corpus from DB, using fallback", exc_info=True)
     # Fallback: read from JSON file
     with open(_CORPUS_FALLBACK_PATH, encoding="utf-8") as f:
         _corpus_cache = json.load(f).get("sections", [])
@@ -47,7 +53,9 @@ _llm_config: dict = {
 
 
 def get_llm_config() -> dict:
-    return dict(_llm_config)
+    cfg = dict(_llm_config)
+    cfg["api_key"] = "****" if cfg.get("api_key") else ""
+    return cfg
 
 
 def update_llm_config(url: str, model: str, provider: str = "openai", api_key: str = "") -> dict:
@@ -194,9 +202,20 @@ def search_corpus(query: str) -> list:
 
 # ── RAG response ───────────────────────────────────────────────────────────────
 
+def _trim_history(history: list) -> list:
+    """Keep only the last N turns and truncate individual messages to avoid unbounded context growth."""
+    trimmed = history[-(  _MAX_CHAT_HISTORY_TURNS * 2):]
+    return [
+        {**msg, "text": msg["text"][:_MAX_TOKENS_PER_HISTORY_MSG]}
+        for msg in trimmed
+        if isinstance(msg.get("text"), str)
+    ]
+
+
 async def get_rag_response(query: str, chat_history: list | None = None) -> dict:
     if chat_history is None:
         chat_history = []
+    chat_history = _trim_history(chat_history)
     search_results  = search_corpus(query)
     context_chunks  = search_results[:3]
 
@@ -244,7 +263,7 @@ async def get_rag_response(query: str, chat_history: list | None = None) -> dict
     ]
 
     try:
-        answer = await call_llm(messages, temperature=0.3)
+        answer = await call_llm(messages, temperature=0.3, max_tokens=800)
         return {
             "answer": answer,
             "citations": [

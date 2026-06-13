@@ -60,10 +60,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     _HEADERS = {
         "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "SAMEORIGIN",
+        "X-Frame-Options": "DENY",
         "X-XSS-Protection": "1; mode=block",
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Permissions-Policy": "geolocation=(), camera=(), microphone=()",
+        "Content-Security-Policy": (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        ),
     }
 
     async def dispatch(self, request: Request, call_next):
@@ -73,11 +81,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+_ENDPOINT_RPM: dict[str, int] = {
+    "/api/v1/chat": 20,
+    "/api/v1/documents/parse": 5,
+    "/api/v1/ai-review/request": 10,
+    "/api/v1/llm/test": 10,
+}
+_MAX_TRACKED_IPS = 10_000
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Sliding-window in-memory rate limiter.
-    Keyed by client IP; rejects with 429 when over `rpm` requests/minute.
-    /health is exempt.
+    Keyed by (client IP, path) for sensitive endpoints; IP-only for global limit.
+    /health is exempt. Bounded memory: evicts oldest IPs beyond _MAX_TRACKED_IPS.
     """
 
     def __init__(self, app, rpm: int = 120):
@@ -86,24 +103,45 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._window = 60.0
         self._buckets: dict[str, deque] = defaultdict(deque)
 
+    def _check(self, key: str, limit: int, now: float) -> bool:
+        """Returns True if rate limit exceeded."""
+        bucket = self._buckets[key]
+        while bucket and bucket[0] < now - self._window:
+            bucket.popleft()
+        if len(bucket) >= limit:
+            return True
+        bucket.append(now)
+        return False
+
     async def dispatch(self, request: Request, call_next):
-        if request.url.path == "/health":
+        if request.url.path in ("/health", "/docs", "/redoc", "/openapi.json"):
             return await call_next(request)
 
         ip = request.client.host if request.client else "unknown"
         now = time.time()
-        bucket = self._buckets[ip]
+        path = request.url.path
 
-        # Drop timestamps outside the sliding window
-        while bucket and bucket[0] < now - self._window:
-            bucket.popleft()
+        # Evict oldest IPs if memory is over the cap
+        if len(self._buckets) > _MAX_TRACKED_IPS:
+            oldest_keys = list(self._buckets.keys())[:_MAX_TRACKED_IPS // 2]
+            for k in oldest_keys:
+                del self._buckets[k]
 
-        if len(bucket) >= self._rpm:
+        # Per-endpoint tighter limit for sensitive paths
+        endpoint_limit = _ENDPOINT_RPM.get(path)
+        if endpoint_limit and self._check(f"{ip}:{path}", endpoint_limit, now):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded for this endpoint. Please slow down."},
+                headers={"Retry-After": "60"},
+            )
+
+        # Global per-IP limit
+        if self._check(ip, self._rpm, now):
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Please slow down."},
                 headers={"Retry-After": "60"},
             )
 
-        bucket.append(now)
         return await call_next(request)

@@ -124,7 +124,10 @@ async def run_update() -> None:
                     with DDGS() as ddgs:
                         return list(ddgs.text(q, max_results=6, timelimit="y"))
 
-                hits = await asyncio.to_thread(_search)
+                hits = await asyncio.wait_for(
+                    asyncio.to_thread(_search),
+                    timeout=15.0,
+                )
 
                 for r in hits:
                     url = r.get("href", "")
@@ -146,6 +149,10 @@ async def run_update() -> None:
                     })
                     if inserted:
                         new_count += 1
+            except asyncio.TimeoutError:
+                msg = f"Timeout on query: {query}"
+                print(f"[TaxUpdater] {msg}")
+                search_errors.append(msg)
             except Exception as exc:
                 msg = str(exc)
                 print(f"[TaxUpdater] Search error for '{query}': {msg}")
